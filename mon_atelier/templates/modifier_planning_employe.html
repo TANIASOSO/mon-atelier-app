@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="section" style="background: #f8f9fa; min-height: 100vh;">
+    <div style="max-width: 1100px; margin: 0 auto; background: #fff; border-radius: 24px; box-shadow: 0 4px 32px #e0e0e0; padding: 2.5rem 2rem 2rem 2rem;">
+    <h1 class="title is-3" style="color:#a18aff;">Planning de tous les employés</h1>
+        <div style="display: flex; align-items: flex-start; gap: 2rem; margin-bottom: 1rem;">
+            <!-- Sidebar employés -->
+            <aside style="width: 180px; background: #f6f6ff; border-radius: 12px; box-shadow: 0 2px 8px #ececff; padding: 1rem 0.5rem;">
+                <div style="font-weight:bold; margin-bottom: 1rem; text-align:center;">Filtrer par employé</div>
+                <ul id="employe-list" style="list-style:none; padding:0; margin:0;">
+                    <li data-employe="all" class="employe-item is-active" style="cursor:pointer; padding: 0.5rem 0.7rem; border-radius:8px; margin-bottom:4px; background:#e0e0ff;">Tous</li>
+                    {% for emp in employes %}
+                    <li data-employe="{{ emp.nom }}" class="employe-item" style="cursor:pointer; padding: 0.5rem 0.7rem; border-radius:8px; margin-bottom:4px; color:{{ emp.couleur }}; font-weight:bold;">{{ emp.nom }}</li>
+                    {% endfor %}
+                </ul>
+            </aside>
+            <!-- Calendrier + bouton -->
+            <div style="flex:1; position:relative;">
+                <div id="calendar-modif-planning"></div>
+                <button id="btn-add-event" class="button is-primary is-rounded" style="position:absolute; top:10px; right:10px; height: 40px; width: 40px; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; padding:0;">+</button>
+            </div>
+        </div>
+            <a href="{{ url_for('index') }}" class="button is-light" style="margin-top:1.5rem;">Retour</a>
+
+            <!-- Modal d'ajout présence/congé -->
+            <div class="modal" id="addEventModal">
+                <div class="modal-background"></div>
+                <div class="modal-card">
+                    <header class="modal-card-head">
+                        <p class="modal-card-title">Ajouter une présence ou un congé</p>
+                        <button class="delete" aria-label="close" id="close-modal"></button>
+                    </header>
+                    <section class="modal-card-body">
+                        <form id="addEventForm">
+                            <div class="field is-grouped">
+                                <div class="control" style="width:48%;">
+                                    <label class="label">Du</label>
+                                    <input class="input" type="date" name="date_debut" id="event-date-debut" required>
+                                </div>
+                                <div class="control" style="width:48%;">
+                                    <label class="label">Au</label>
+                                    <input class="input" type="date" name="date_fin" id="event-date-fin" required>
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label class="label">Type</label>
+                                <div class="control">
+                                    <div class="select">
+                                        <select name="type" id="event-type" required>
+                                            <option value="presence">Présence</option>
+                                            <option value="conge">Congé</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="field" id="motif-field" style="display:none;">
+                                <label class="label">Motif (si congé)</label>
+                                <div class="control">
+                                    <input class="input" type="text" name="motif" id="event-motif" placeholder="Motif du congé">
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label class="label">Employé</label>
+                                <div class="control">
+                                    <div class="select is-fullwidth">
+                                        <select name="employe_id" id="event-employe-id" required>
+                                            <option value="">Sélectionner...</option>
+                                            {% for emp in employes %}
+                                                <option value="{{ emp.id }}">{{ emp.nom }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="button is-success">Ajouter</button>
+                        </form>
+                    </section>
+                </div>
+            </div>
+    </div>
+        <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
+        <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+        <style>
+        #calendar-loader {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            display: none;
+        }
+        </style>
+        <div id="calendar-loader">
+            <span class="loader is-loading"></span>
+            <span style="margin-left:8px;">Chargement...</span>
+        </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                var calendarEl = document.getElementById('calendar-modif-planning');
+                var employeSelect = document.getElementById('event-employe-id');
+                var loader = document.getElementById('calendar-loader');
+                // Positionne le loader au centre du calendrier
+                calendarEl.style.position = 'relative';
+                loader.style.position = 'absolute';
+                loader.style.left = '50%';
+                loader.style.top = '50%';
+                loader.style.transform = 'translate(-50%, -50%)';
+
+
+                // Stocke tous les événements pour filtrage JS
+                var allEvents = {{ events|tojson }};
+                var calendar = new FullCalendar.Calendar(calendarEl, {
+                    initialView: 'dayGridMonth',
+                    locale: 'fr',
+                    height: 700,
+                    headerToolbar: {
+                        left: 'prev,next today',
+                        center: 'title',
+                        right: ''
+                    },
+                    events: allEvents,
+                });
+                calendar.render();
+
+                // Sidebar : filtrage par employé
+                document.querySelectorAll('.employe-item').forEach(function(item) {
+                    item.addEventListener('click', function() {
+                        document.querySelectorAll('.employe-item').forEach(e=>e.classList.remove('is-active'));
+                        this.classList.add('is-active');
+                        var employe = this.getAttribute('data-employe');
+                        if(employe === 'all') {
+                            calendar.removeAllEvents();
+                            calendar.addEventSource(allEvents);
+                        } else {
+                            var filtered = allEvents.filter(ev => ev.title.startsWith(employe+' '));
+                            calendar.removeAllEvents();
+                            calendar.addEventSource(filtered);
+                        }
+                    });
+                });
+
+                // Recharge les événements quand on change d'employé
+                employeSelect.addEventListener('change', function() {
+                    calendar.removeAllEvents();
+                    calendar.refetchEvents();
+                });
+
+                // Ouvre le modal à l'appui sur le bouton +
+                document.getElementById('btn-add-event').addEventListener('click', function(e) {
+                    e.preventDefault();
+                    document.getElementById('addEventModal').classList.add('is-active');
+                });
+                document.getElementById('close-modal').addEventListener('click', function() {
+                    document.getElementById('addEventModal').classList.remove('is-active');
+                });
+                document.querySelector('.modal-background').addEventListener('click', function() {
+                    document.getElementById('addEventModal').classList.remove('is-active');
+                });
+
+                // Affiche le champ motif si "congé" sélectionné
+                document.getElementById('event-type').addEventListener('change', function() {
+                    document.getElementById('motif-field').style.display = this.value === 'conge' ? '' : 'none';
+                });
+
+                // Soumission du formulaire d'ajout (AJAX)
+                document.getElementById('addEventForm').addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    var formData = new FormData(this);
+                    fetch("{{ url_for('ajouter_presence_conge') }}", {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if(data.success) {
+                            calendar.refetchEvents();
+                            document.getElementById('addEventModal').classList.remove('is-active');
+                            this.reset();
+                            document.getElementById('motif-field').style.display = 'none';
+                        } else {
+                            alert('Erreur : ' + (data.error || 'Impossible d\'ajouter l\'événement.'));
+                        }
+                    });
+                });
+            });
+        </script>
+</section>
+{% endblock %}

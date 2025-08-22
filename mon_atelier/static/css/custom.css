@@ -1,0 +1,27 @@
+/* Fichier : mon_atelier/static/css/custom.css - NOUVELLE VERSION */
+
+html {
+  /* On applique l'image de fond au plus haut niveau */
+  background-image: url('/static/images/fond_calendrier.png') !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-attachment: fixed !important;
+}
+
+body {
+  /* On s'assure que le body lui-même est transparent */
+  background-color: transparent !important;
+}
+
+/* On rend les conteneurs principaux de Bulma transparents pour voir à travers */
+.section {
+  background-color: transparent !important;
+}
+
+/* On garde un fond blanc pour les "boîtes" de contenu pour la lisibilité */
+.box {
+  background: #fff !important;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.07);
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+}

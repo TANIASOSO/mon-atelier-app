@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="box" style="max-width:600px;margin:0 auto;">
+            <h1 class="title is-4" style="color:#6c63ff;">Détail de la retouche #{{ retouche.id }}</h1>
+            <div class="content">
+                <p><strong>Client :</strong> {{ retouche.client.nom }}</p>
+                <p><strong>Numéro de téléphone :</strong> {{ retouche.client.numero_telephone }}</p>
+                <p><strong>Type de retouche :</strong> {{ retouche.type.nom if retouche.type else 'Non spécifié' }}</p>
+                <p><strong>Prix :</strong> {{ retouche.prix if retouche.prix else 'Non spécifié' }} €</p>
+                <p><strong>Description :</strong> {{ retouche.description if retouche.description else 'Aucune' }}</p>
+                <p><strong>Statut :</strong> {{ retouche.statut }}</p>
+                <p><strong>Date d'échéance :</strong> {{ retouche.date_echeance.strftime('%d/%m/%Y') if retouche.date_echeance else 'Non spécifié' }}</p>
+            </div>
+            <form action="{{ url_for('detail_retouche', id=retouche.id) }}" method="post" style="margin-top:20px; display:flex; align-items:center; gap: 10px;">
+                <label for="statut">Changer le statut :</label>
+                <select name="statut" id="statut">
+                    <option value="En attente" {% if retouche.statut == 'En attente' %}selected{% endif %}>En attente</option>
+                    <option value="En cours" {% if retouche.statut == 'En cours' %}selected{% endif %}>En cours</option>
+                    <option value="Terminée" {% if retouche.statut == 'Terminée' %}selected{% endif %}>Terminée</option>
+                </select>
+                <button type="submit" class="button is-link is-light">Mettre à jour</button>
+            </form>
+                        <div style="display:flex; gap:10px; margin-top:20px;">
+                            <a href="{{ url_for('modifier_retouche', id=retouche.id) }}" class="button is-primary">Modifier la retouche</a>
+                            <a href="{{ url_for('reimprimer_ticket', retouche_id=retouche.id) }}" class="button is-warning is-light" target="_blank">Réimprimer le ticket</a>
+                            <a href="{{ url_for('planning_retouches_mensuel') }}" class="button is-light">Retour planning</a>
+                            <form method="post" action="{{ url_for('supprimer_retouche', id=retouche.id) }}" style="display:inline;">
+                                <button type="submit" class="button is-danger" onclick="return confirm('Êtes-vous sûr de vouloir supprimer définitivement cette retouche ?');">Supprimer</button>
+                            </form>
+                        </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

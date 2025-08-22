@@ -1,0 +1,16 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Lancer l'application Flask",
+			"type": "shell",
+			"command": "C:/Users/JOJO3/AppData/Local/Programs/Python/Python313/python.exe",
+			"args": [
+				"app.py"
+			],
+			"group": "build",
+			"isBackground": true,
+			"problemMatcher": []
+		}
+	]
+}

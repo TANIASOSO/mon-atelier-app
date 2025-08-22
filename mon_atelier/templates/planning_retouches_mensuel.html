@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="box">
+            <h1 class="title has-text-centered" style="color:#6c63ff;">
+                Planning Mensuel des Retouches
+            </h1>
+
+            <div id="retouches-calendar"></div>
+
+        </div>
+    </div>
+</section>
+
+
+<style>
+    .tache-terminee {
+        text-decoration: line-through;
+        background-color: #d3d3d3 !important; /* Un gris clair pour le fond */
+        border-color: #b0b0b0 !important;   /* Une bordure plus foncée */
+    }
+</style>
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // On cible bien le div avec l'id 'retouches-calendar'
+        var calendarEl = document.getElementById('retouches-calendar');
+
+
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            locale: 'fr',
+            height: 'auto',
+            firstDay: 1,
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,dayGridWeek,listWeek,dayGridDay'
+            },
+            buttonText: {
+                dayGridMonth: 'Mois',
+                dayGridWeek: 'Semaine (colonnes)',
+                listWeek: 'Semaine (liste)',
+                dayGridDay: "Aujourd'hui"
+            },
+            views: {
+                listWeek: {
+                    duration: { days: 6 },
+                    firstDay: 1
+                }
+            },
+            // On charge les événements depuis notre API
+            events: '/api/retouche_events',
+
+            // Affichage personnalisé du contenu de l'événement (client + résumé)
+            eventContent: function(arg) {
+                let clientName = document.createElement('b');
+                clientName.innerHTML = arg.event.title;
+                let summaryDiv = document.createElement('div');
+                let summaryLines = arg.event.extendedProps.summary || [];
+                summaryLines.forEach(function(line) {
+                    let p = document.createElement('p');
+                    p.innerHTML = line;
+                    p.style.fontSize = '12px';
+                    summaryDiv.appendChild(p);
+                });
+                return { domNodes: [clientName, summaryDiv] };
+            },
+
+            // Affiche un message personnalisé quand il n'y a aucun événement
+            noEventsContent: 'Aucune retouche prévue',
+
+            // On rend les événements cliquables
+            eventClick: function(info) {
+                if (info.event.url) {
+                    window.location.href = info.event.url;
+                    info.jsEvent.preventDefault(); 
+                }
+            }
+        });
+
+        // On dessine le calendrier
+        calendar.render();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="section" style="background: #eaf3fa; min-height: 100vh;">
+  <div style="display:flex; max-width: 1400px; margin: 0 auto;">
+    <!-- Sidebar -->
+    <aside style="width: 240px; min-width:200px; background: #f6f6ff; border-radius: 18px; box-shadow: 0 2px 8px #ececff; padding: 2rem 1rem 1.5rem 1rem; margin-right:2.5rem; display:flex; flex-direction:column; align-items:center;">
+      <!-- Menu navigation -->
+      <nav style="width:100%; margin-bottom:2rem;">
+        <ul style="list-style:none; padding:0; margin:0;">
+          <li style="margin-bottom:1rem;"><button type="button" class="button is-fullwidth is-light" id="btn-view-week">Semaine</button></li>
+          <li style="margin-bottom:1rem;"><button type="button" class="button is-fullwidth is-light" id="btn-view-month">Mois</button></li>
+          <li><button type="button" class="button is-fullwidth is-light" id="btn-view-day">Jour</button></li>
+        </ul>
+      </nav>
+      <!-- Mini calendrier -->
+      <div id="mini-calendar"></div>
+    </aside>
+    <!-- Contenu principal -->
+    <div style="flex:1;">
+      <div style="max-width: 1200px; margin: 0 auto; background: #fff; border-radius: 24px; box-shadow: 0 4px 32px #e0e0e0; padding: 2.5rem 2rem 2rem 2rem;">
+        <h1 class="title is-3" style="color:#a18aff;">Planning Employé</h1>
+        <div id="planning-employe-calendar"></div>
+      </div>
+    </div>
+  </div>
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.3.4/dist/css/datepicker-bs5.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.3.4/dist/js/datepicker-full.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Mini calendrier VanillaJS Datepicker
+      var miniCal = document.getElementById('mini-calendar');
+      if (miniCal) {
+        var today = new Date();
+        var dp = new Datepicker(miniCal, {
+          calendarWeeks: true,
+          todayHighlight: true,
+          autohide: true,
+          format: 'yyyy-mm-dd',
+          defaultViewDate: { year: today.getFullYear(), month: today.getMonth()+1, day: today.getDate() },
+        });
+        miniCal.addEventListener('changeDate', function(e) {
+          // Redirige vers la vue du jour sélectionné (si besoin, adapter l'URL)
+          var date = e.detail.date;
+          if(date) {
+            var y = date.getFullYear();
+            var m = (date.getMonth()+1).toString().padStart(2,'0');
+            var d = date.getDate().toString().padStart(2,'0');
+            window.location.href = '/aujourdhui?date='+y+'-'+m+'-'+d;
+          }
+        });
+      }
+      // FullCalendar
+      var calendarEl = document.getElementById('planning-employe-calendar');
+      var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        locale: 'fr',
+        height: 800,
+        headerToolbar: {
+          left: 'prev,next today',
+          center: 'title',
+          right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        buttonText: {
+          dayGridMonth: 'Mois',
+          timeGridWeek: 'Semaine',
+          timeGridDay: 'Jour'
+        },
+        events: {{ events|tojson|safe }},
+        editable: true,
+        selectable: true,
+        select: function(info) {
+          // Ici, tu peux ouvrir un modal pour ajouter une présence/congé
+        },
+        eventClick: function(info) {
+          // Ici, tu peux afficher/modifier un événement employé
+        }
+      });
+      calendar.render();
+
+      // Contrôle de la vue via la sidebar
+      document.getElementById('btn-view-week').addEventListener('click', function() {
+        calendar.changeView('timeGridWeek');
+      });
+      document.getElementById('btn-view-month').addEventListener('click', function() {
+        calendar.changeView('dayGridMonth');
+      });
+      document.getElementById('btn-view-day').addEventListener('click', function() {
+        calendar.changeView('timeGridDay');
+      });
+    });
+  </script>
+</section>
+{% endblock %}

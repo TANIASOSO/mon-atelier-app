@@ -1,0 +1,5 @@
+# Fichier .gitignore
+__pycache__/
+*.pyc
+.env
+retouches.db

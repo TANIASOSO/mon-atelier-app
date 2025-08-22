@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Modifier présence/congé{% endblock %}
+{% block content %}
+<h2>Modifier la présence ou le congé de {{ employe.nom }} le {{ date.strftime('%d/%m/%Y') }}</h2>
+<form method="post">
+    <div class="field">
+        <label class="label">Type</label>
+        <div class="control">
+            <select name="type" required>
+                <option value="presence" {% if presence %}selected{% endif %}>Présence</option>
+                <option value="conge" {% if conge %}selected{% endif %}>Congé</option>
+            </select>
+        </div>
+    </div>
+    <div class="field">
+        <label class="label">Date début</label>
+        <div class="control">
+            <input class="input" type="date" name="date_debut" value="{{ date.strftime('%Y-%m-%d') }}" required>
+        </div>
+    </div>
+    <div class="field">
+        <label class="label">Date fin (pour congé)</label>
+        <div class="control">
+            <input class="input" type="date" name="date_fin" value="{{ conge.date_fin.strftime('%Y-%m-%d') if conge else date.strftime('%Y-%m-%d') }}">
+        </div>
+    </div>
+    <div class="field">
+        <label class="label">Motif (pour congé)</label>
+        <div class="control">
+            <input class="input" type="text" name="motif" value="{{ conge.motif if conge else '' }}" placeholder="Ex: Vacances, Maladie">
+        </div>
+    </div>
+    <input type="hidden" name="employe_id" value="{{ employe.id }}">
+    <input type="hidden" name="date" value="{{ date.strftime('%Y-%m-%d') }}">
+    <button class="button is-primary" type="submit">Enregistrer</button>
+    <a href="{{ url_for('index') }}" class="button is-light">Annuler</a>
+</form>
+{% if presence or conge %}
+<form method="post" action="{{ url_for('supprimer_presence_conge', employe_id=employe.id, date=date.strftime('%Y-%m-%d')) }}" style="margin-top:1em;">
+    <button class="button is-danger" type="submit" onclick="return confirm('Supprimer cette présence ou ce congé ?');">Supprimer</button>
+</form>
+{% endif %}
+{% endblock %}
