@@ -107,9 +107,6 @@ class Retouche(db.Model):
 
 
 # --- CRÉATION INITIALE DE LA BASE DE DONNÉES ---
-with app.app_context():
-    db.create_all()
-
 
 # --- PAGES WEB (LES ROUTES) ---
 

@@ -3,6 +3,7 @@ from mon_atelier import app, db
 from mon_atelier.routes import Fourniture
 
 with app.app_context():
+    db.create_all()
     with open('inventaire.csv', newline='', encoding='utf-8') as csvfile:
         reader = csv.reader(csvfile, delimiter=';')
         headers = next(reader, None)
