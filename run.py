@@ -1,10 +1,10 @@
-
 from mon_atelier import app, db
+from mon_atelier.routes import seed_data  # Ajoute cette ligne
 
-# Create database tables if they don't exist
 with app.app_context():
     db.create_all()
-    
+    seed_data()  # Ajoute cette ligne pour remplir la base au démarrage
+
 import os
 
 if __name__ == "__main__":
