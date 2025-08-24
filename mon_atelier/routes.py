@@ -59,7 +59,7 @@ class PlanningShift(db.Model):
     heure_debut = db.Column(db.Time, nullable=False)
     heure_fin = db.Column(db.Time, nullable=False)
     tache = db.Column(db.String(100), nullable=True) # Par ex: 'Accueil', 'Atelier', 'Caisse'
-    employe_id = db.Column(db.Integer, db.ForeignKey('employe.id'), nullable=False)
+    employe_id = db.Column(db.Integer, db.ForeignKey('employe.id'), nullable=True) (nullable)
 
     def __repr__(self):
         return f'<PlanningShift {self.employe.nom} le {self.date}>'
