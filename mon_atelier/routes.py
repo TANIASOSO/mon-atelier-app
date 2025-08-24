@@ -2,7 +2,7 @@ from datetime import date, datetime, timedelta, time
 from flask import render_template
 from flask import request, redirect, url_for, jsonify, flash
 from mon_atelier import app, db, twilio_client
-import locale
+from babel.dates import format_date
 from collections import Counter, defaultdict
 
 # --- MODÈLES DE BASE DE DONNÉES ---
@@ -184,8 +184,6 @@ def ajouter_shift():
 @app.route("/ajouter", methods=['GET', 'POST'])
 def ajouter_retouche():
     if request.method == 'POST':
-        import locale
-        locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
         date_str = request.form.get('date_echeance')
         date_obj = datetime.strptime(date_str, '%Y-%m-%d').date() if date_str else None
         nom_client_form = request.form.get('nom_client')
@@ -253,7 +251,7 @@ def ajouter_retouche():
         numero_ticket = retouches_creees[0].id if retouches_creees else None
         
         now = datetime.now()
-        now_fr = now.strftime('%A %d %B %Y')
+        date_formatee = format_date(now, format='full', locale='fr_FR')
         return render_template('ticket.html', 
                                client=client,
                                retouches=retouches_creees,
@@ -263,7 +261,7 @@ def ajouter_retouche():
                                tva_rate=tva_rate,
                                numero_ticket=numero_ticket,
                                now=now,
-                               now_fr=now_fr)
+                               date_formatee=date_formatee)
     
     # Le code pour la méthode GET ne change pas
     clients = Client.query.all()
@@ -1018,8 +1016,6 @@ def api_retouche_events():
 # Nouvelle route pour réimprimer le ticket d'une retouche
 @app.route('/ticket/<int:retouche_id>/reimprimer')
 def reimprimer_ticket(retouche_id):
-    import locale
-    locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
     retouche = Retouche.query.get_or_404(retouche_id)
     client = retouche.client
     total_ht = retouche.prix or 0.0
@@ -1027,7 +1023,7 @@ def reimprimer_ticket(retouche_id):
     montant_tva = total_ht * tva_rate
     total_ttc = total_ht + montant_tva
     now = datetime.now()
-    now_fr = now.strftime('%A %d %B %Y')
+    date_formatee = format_date(now, format='full', locale='fr_FR')
     return render_template(
         'ticket.html',
         client=client,
@@ -1038,7 +1034,7 @@ def reimprimer_ticket(retouche_id):
         tva_rate=tva_rate,
         numero_ticket=retouche.id,
         now=now,
-        now_fr=now_fr
+        date_formatee=date_formatee
     )
 
 @app.route('/api/shifts_events')
