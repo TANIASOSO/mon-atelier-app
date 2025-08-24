@@ -1,5 +1,7 @@
 from mon_atelier import app, db
 from mon_atelier.routes import seed_data  
+from dotenv import load_dotenv
+load_dotenv()
 
 with app.app_context():
     db.create_all()
