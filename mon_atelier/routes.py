@@ -1,4 +1,3 @@
-
 from mon_atelier import app, db, twilio_client
 from datetime import date, datetime, timedelta, time
 from flask import render_template
@@ -1034,7 +1033,8 @@ def api_retouche_events():
                 'url': url_for('detail_ticket', ticket_id=ticket.id),
                 'className': 'tache-terminee' if is_all_terminated else '',
                 'extendedProps': {
-                    'summary': summary_list
+                    'summary': summary_list,
+                    'ticket_id': ticket.id  # <-- Ajouté ici
                 }
             })
     return jsonify(events)
