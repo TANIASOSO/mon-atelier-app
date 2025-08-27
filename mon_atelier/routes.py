@@ -1034,7 +1034,7 @@ def api_retouche_events():
                 'className': 'tache-terminee' if is_all_terminated else '',
                 'extendedProps': {
                     'summary': summary_list,
-                    'ticket_id': ticket.id  # <-- Ajouté ici
+                    'ticket_id': ticket.id  # <-- Ajout de l'ID du ticket ici
                 }
             })
     return jsonify(events)
