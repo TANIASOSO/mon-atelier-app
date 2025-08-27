@@ -1210,44 +1210,6 @@ def detail_ticket(ticket_id):
         now_fr=now_fr
     )
 
-# Dans routes.py ou un script dédié
-@app.route('/admin/reload_tarifs')
-def reload_tarifs():
-    seed_data()
-    return "Tarifs rechargés"
-
-    # Route d'administration pour vider les tarifs (prestations, sous-catégories, catégories)
-@app.route('/admin/clear_tarifs')
-def clear_tarifs():
-    # Supprime d'abord les détails de retouche
-    DetailRetouche.query.delete()
-    # Puis les sous-catégories
-    SousCategorie.query.delete()
-    # Puis les catégories
-    Categorie.query.delete()
-    db.session.commit()
-    return "Tarifs vidés. Vous pouvez maintenant recharger la grille tarifaire."
-
-    # --- API pour modifier une retouche individuellement (AJAX depuis ticket_detail) ---
-@app.route('/api/retouche/modifier/<int:retouche_id>', methods=['POST'])
-def modifier_retouche_api(retouche_id):
-    retouche = Retouche.query.get_or_404(retouche_id)
-    data = request.get_json()
-
-    if not data:
-        return jsonify({'success': False, 'message': 'Données manquantes.'}), 400
-
-    # Mettre à jour les champs fournis
-    retouche.description = data.get('description', retouche.description)
-    retouche.statut = data.get('statut', retouche.statut)
-    try:
-        if 'prix' in data and data['prix'] is not None:
-            retouche.prix = float(data['prix'])
-    except (ValueError, TypeError):
-        return jsonify({'success': False, 'message': 'Prix invalide.'}), 400
-    db.session.commit()
-    return jsonify({'success': True, 'message': 'Retouche mise à jour.'})
-
 # --- MODIFICATION GROUPEE DES RETOUCHES D'UN TICKET ---
 @app.route('/ticket/<int:ticket_id>/modifier', methods=['GET', 'POST'])
 def modifier_ticket(ticket_id):
@@ -1269,3 +1231,31 @@ def modifier_ticket(ticket_id):
         db.session.commit()
         return redirect(url_for('detail_ticket', ticket_id=ticket.id))
     return render_template('modifier_ticket.html', ticket=ticket)
+
+# --- ROUTE POUR RÉIMPRIMER UN TICKET ---
+@app.route('/ticket/<int:ticket_id>/reimprimer')
+def reimprimer_ticket(ticket_id):
+    import locale
+    locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
+    ticket = Ticket.query.get_or_404(ticket_id)
+    client = ticket.client
+    retouches = ticket.retouches
+    total_ht = sum(r.prix or 0.0 for r in retouches)
+    tva_rate = app.config.get('TVA_RATE', 0.2)
+    montant_tva = total_ht * tva_rate
+    total_ttc = total_ht + montant_tva
+    now = datetime.now()
+    date_formatee = format_date(now, format='full', locale='fr_FR')
+    return render_template(
+        'ticket.html',
+        client=client,
+        ticket=ticket,
+        retouches=retouches,
+        total_ht=total_ht,
+        montant_tva=montant_tva,
+        total_ttc=total_ttc,
+        tva_rate=tva_rate,
+        numero_ticket=ticket.id,
+        now=now,
+        date_formatee=date_formatee
+    )
