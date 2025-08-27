@@ -1,10 +1,14 @@
-
 from mon_atelier import app, db
+from mon_atelier.routes import seed_data  
+from dotenv import load_dotenv
+load_dotenv()
 
-# Create database tables if they don't exist
 with app.app_context():
     db.create_all()
+    seed_data()  
 
-if __name__ == '__main__':
-    # Mode développement (debug + rechargement auto)
-    app.run(debug=True)
+import os
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)
