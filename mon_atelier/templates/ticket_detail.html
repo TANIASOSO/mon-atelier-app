@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="section" style="background: #eaf3fa; min-height: 100vh;">
+    <div class="container">
+        <div class="box" style="max-width: 900px; margin: 0 auto; box-shadow: 0 4px 32px #e0e0e0; border-radius: 24px; overflow: hidden; background: #fff; padding: 2.5rem 2rem 2rem 2rem;">
+            <h1 class="title" style="font-size:2.2rem; font-weight:800; color:#222; margin-bottom:0.2em;">Ticket n°{{ ticket.id }}</h1>
+            <h2 class="subtitle" style="font-size:1.1rem; color:#444; margin-bottom:2em;">Client : <span style="font-weight:600;">{{ client.nom }}</span> — {{ client.numero_telephone }}</h2>
+            <div style="margin-bottom:1.2em;">
+                <span style="font-weight:600;">Date du ticket :</span> {{ ticket.date_echeance.strftime('%d/%m/%Y') if ticket.date_echeance else 'Non renseignée' }}<br>
+                <span style="font-weight:600;">Statut du ticket :</span> {{ ticket.statut }}<br>
+                {% if ticket.commentaire %}<span style="font-weight:600;">Commentaire :</span> {{ ticket.commentaire }}<br>{% endif %}
+            </div>
+            <hr>
+            <h2 class="subtitle is-4" style="font-size:1.1rem; color:#444;">Retouches incluses dans ce ticket</h2>
+            <div style="overflow-x:auto;">
+                <table class="table is-fullwidth is-bordered" style="background:#fff;">
+                    <thead>
+                        <tr style="background:#f6f6ff;">
+                            <th>Détail</th>
+                            <th>Description</th>
+                            <th>Prix</th>
+                            <th>Statut</th>
+                            <th>Essayage boutique</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in retouches %}
+                        <tr data-id="{{ r.id }}">
+                            <td class="retouche-detail">{{ r.detail.nom if r.detail else '' }}</td>
+                            <td class="retouche-description">{{ r.description }}</td>
+                            <td class="retouche-prix">{{ '%.2f'|format(r.prix or 0) }}</td>
+                            <td class="retouche-statut">{{ r.statut }}</td>
+                            <td>{% if r.essayage_boutique %}Oui{% else %}Non{% endif %}</td>
+                            <td>
+                                <button class="button is-small is-info edit-retouche-btn" data-id="{{ r.id }}">Modifier</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+{% block scripts %}
+<script>
+document.querySelectorAll('.edit-retouche-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+        const tr = btn.closest('tr');
+        if (btn.textContent.trim() === 'Modifier') {
+            // Passer en mode édition
+            const descCell = tr.querySelector('.retouche-description');
+            const prixCell = tr.querySelector('.retouche-prix');
+            const statutCell = tr.querySelector('.retouche-statut');
+            const desc = descCell.textContent.trim();
+            const prix = prixCell.textContent.trim().replace('€','').replace(',', '.');
+            const statut = statutCell.textContent.trim();
+
+            descCell.innerHTML = `<input class="input" type="text" value="${desc}">`;
+            prixCell.innerHTML = `<input class="input" type="number" step="0.01" value="${prix}">`;
+            statutCell.innerHTML = `<select class="select">
+                <option value="En attente" ${statut==='En attente'?'selected':''}>En attente</option>
+                <option value="En cours" ${statut==='En cours'?'selected':''}>En cours</option>
+                <option value="Terminée" ${statut==='Terminée'?'selected':''}>Terminée</option>
+                <option value="Rendue" ${statut==='Rendue'?'selected':''}>Rendue</option>
+            </select>`;
+            btn.textContent = 'Enregistrer';
+            btn.classList.remove('is-info');
+            btn.classList.add('is-success');
+        } else {
+            // Enregistrer
+            const retoucheId = btn.getAttribute('data-id');
+            const tr = btn.closest('tr');
+            const desc = tr.querySelector('.retouche-description input').value;
+            const prix = tr.querySelector('.retouche-prix input').value;
+            const statut = tr.querySelector('.retouche-statut select').value;
+            fetch(`/api/retouche/modifier/${retoucheId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ description: desc, prix: prix, statut: statut })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    tr.querySelector('.retouche-description').textContent = desc;
+                    tr.querySelector('.retouche-prix').textContent = parseFloat(prix).toFixed(2);
+                    tr.querySelector('.retouche-statut').textContent = statut;
+                    btn.textContent = 'Modifier';
+                    btn.classList.remove('is-success');
+                    btn.classList.add('is-info');
+                } else {
+                    alert(data.message || 'Erreur lors de la mise à jour.');
+                }
+            })
+            .catch(() => alert('Erreur lors de la requête.'));
+        }
+    });
+});
+</script>
+{% endblock %}
+                    </tbody>
+                </table>
+            </div>
+            <hr>
+            <div style="font-size:1.1rem; margin-bottom:1em;">
+                <strong>Total HT :</strong> {{ '%.2f'|format(total_ht) }} €<br>
+                <strong>TVA ({{ (tva_rate * 100)|int }}%) :</strong> {{ '%.2f'|format(montant_tva) }} €<br>
+                <strong>Total TTC :</strong> {{ '%.2f'|format(total_ttc) }} €
+            </div>
+            <div style="color:#888; font-size:0.95em; margin-bottom:2em;"><em>Imprimé le {{ now_fr }}</em></div>
+            <div style="display:flex; gap:1rem;">
+                <a href="{{ url_for('modifier_ticket', ticket_id=ticket.id) }}" class="button is-link">Modifier ce ticket</a>
+                <a href="{{ url_for('reimprimer_ticket', ticket_id=ticket.id) }}" class="button is-primary">Réimprimer ce ticket</a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

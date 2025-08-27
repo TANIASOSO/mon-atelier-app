@@ -122,14 +122,58 @@
           timeGridWeek: 'Semaine',
           timeGridDay: 'Jour'
         },
-  events: '/api/shifts_events'
+        events: '/api/shifts_events',
+        eventClick: function(info) {
+            // Affiche les détails de l'événement dans la modale
+            document.getElementById('modal-event-title').innerText = info.event.title;
+            document.getElementById('modal-event-start').innerText = info.event.start.toLocaleString('fr-FR');
+            // Configure les liens des boutons
+            let eventId = info.event.extendedProps.shift_id;
+            document.getElementById('modal-edit-link').href = `/shift/modifier/${eventId}`;
+            document.getElementById('modal-delete-form').action = `/shift/supprimer/${eventId}`;
+            // Ouvre la modale
+            document.getElementById('modal-view-event').classList.add('is-active');
+        }
       });
       calendar.render();
+    });
+
+    // Gestion fermeture de la modale d'événement
+    document.addEventListener('DOMContentLoaded', function() {
+      var modal = document.getElementById('modal-view-event');
+      if (modal) {
+        modal.querySelector('.delete').addEventListener('click', function() {
+          modal.classList.remove('is-active');
+        });
+        modal.querySelector('.modal-background').addEventListener('click', function() {
+          modal.classList.remove('is-active');
+        });
+      }
     });
   </script>
 
   <!-- Modale Bulma pour ajout d'événement -->
   <div class="modal" id="modal-ajout-event">
+  <!-- Modale pour voir/modifier/supprimer un événement -->
+  <div id="modal-view-event" class="modal">
+    <div class="modal-background"></div>
+    <div class="modal-card">
+      <header class="modal-card-head">
+        <p class="modal-card-title">Détail de l'événement</p>
+        <button class="delete" aria-label="close"></button>
+      </header>
+      <section class="modal-card-body">
+        <p><strong>Tâche :</strong> <span id="modal-event-title"></span></p>
+        <p><strong>Début :</strong> <span id="modal-event-start"></span></p>
+      </section>
+      <footer class="modal-card-foot">
+        <a id="modal-edit-link" href="#" class="button is-success">Modifier</a>
+        <form id="modal-delete-form" method="POST" style="margin-left: 10px;">
+            <button class="button is-danger" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet événement ?');">Supprimer</button>
+        </form>
+      </footer>
+    </div>
+  </div>
     <div class="modal-background"></div>
     <div class="modal-card">
       <header class="modal-card-head">

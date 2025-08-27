@@ -6,11 +6,11 @@
     <style>
         body { 
             font-family: Arial, sans-serif;
-            width: 280px;
+            width: 320px;
             margin: 0 auto;
             color: #000;
-            font-size: 11px;
-            line-height: 1.2;
+            font-size: 15px;
+            line-height: 1.35;
         }
         .header {
             text-align: center;
@@ -19,27 +19,27 @@
             padding-bottom: 10px;
         }
         .header h1 { 
-            font-size: 18px; 
+            font-size: 24px; 
             font-weight: bold; 
             margin: 0 0 5px 0;
             text-transform: uppercase;
         }
         .header .subtitle {
-            font-size: 9px;
+            font-size: 13px;
             font-style: italic;
             margin-bottom: 8px;
         }
         .header p { 
             margin: 1px 0; 
-            font-size: 10px; 
+            font-size: 13px; 
         }
         
         .ticket-conserve {
             text-align: center;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 18px;
             margin: 10px 0;
-            padding: 5px;
+            padding: 7px;
             border: 1px solid #000;
         }
         
@@ -55,12 +55,12 @@
             flex: 1;
         }
         .date-info .label {
-            font-size: 9px;
+            font-size: 13px;
             margin-bottom: 2px;
         }
         .date-info .value {
             font-weight: bold;
-            font-size: 12px;
+            font-size: 16px;
         }
         
         .client-info {
@@ -69,24 +69,24 @@
             border: 1px solid #000;
         }
         .client-info .label {
-            font-size: 9px;
+            font-size: 13px;
         }
         .client-info .name {
             font-weight: bold;
-            font-size: 12px;
+            font-size: 16px;
         }
         .client-info .phone {
-            font-size: 10px;
+            font-size: 13px;
         }
         
         .ticket-number {
             text-align: center;
             margin: 15px 0;
-            padding: 8px;
+            padding: 10px;
             background: #ff6b6b;
             color: white;
             font-weight: bold;
-            font-size: 16px;
+            font-size: 22px;
         }
         
         .etiquetage-section {
@@ -95,11 +95,11 @@
         }
         .etiquetage-title {
             font-weight: bold;
-            font-size: 12px;
+            font-size: 16px;
             margin-bottom: 5px;
         }
         .etiquetage-date {
-            font-size: 10px;
+            font-size: 14px;
             margin-bottom: 10px;
         }
         
@@ -109,27 +109,28 @@
             padding: 5px;
         }
         .code-label {
-            font-size: 9px;
+            font-size: 13px;
             margin-bottom: 3px;
         }
         .code-value {
             font-weight: bold;
-            font-size: 11px;
+            font-size: 15px;
         }
         
         .prestations {
             margin: 15px 0;
-            font-size: 10px;
+            font-size: 14px;
         }
         .prestation-item {
-            margin: 3px 0;
-            padding: 2px 0;
+            margin: 5px 0;
+            padding: 3px 0;
             border-bottom: 1px dotted #ccc;
+            font-size: 15px;
         }
         
         .essayage-note {
             text-align: center;
-            font-size: 9px;
+            font-size: 13px;
             margin: 10px 0;
             font-style: italic;
         }
@@ -139,12 +140,12 @@
             text-align: center;
         }
         .signature-label {
-            font-size: 9px;
+            font-size: 13px;
             margin-bottom: 20px;
         }
         
         .footer-legal {
-            font-size: 7px;
+            font-size: 11px;
             text-align: center;
             margin-top: 15px;
             padding: 8px 5px;
@@ -198,9 +199,9 @@
     </div>
     
 
-    <div style="text-align:center; font-weight:bold; font-size:13px; margin: 10px 0 0 0;">
+    <div style="text-align:center; font-weight:bold; font-size:20px; margin: 16px 0 0 0;">
         {{ client.nom.upper() }}<br>
-        <span style="font-weight:normal; font-size:11px;">{{ client.numero_telephone }}</span>
+        <span style="font-weight:normal; font-size:16px;">{{ client.numero_telephone }}</span>
     </div>
     
     <div class="ticket-number">
@@ -231,7 +232,7 @@
             {% set parts = key.split('|') %}
             <div class="prestation-item">
                 - {{ quantite }} {{ parts[0] }} {{ parts[1] }} {{ parts[2] }}{% if parts[3] %} - {{ "%.0f"|format(parts[3]|float) }}€{% endif %}<br>
-                <span style="font-size:10px;">{{ parts[4] }}</span>
+                <span style="font-size:13px;">{{ parts[4] }}</span>
             </div>
         {% endfor %}
     </div>

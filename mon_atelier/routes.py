@@ -1,7 +1,8 @@
+
+from mon_atelier import app, db, twilio_client
 from datetime import date, datetime, timedelta, time
 from flask import render_template
 from flask import request, redirect, url_for, jsonify, flash
-from mon_atelier import app, db, twilio_client
 import locale
 from collections import Counter, defaultdict
 
@@ -24,7 +25,7 @@ class DetailRetouche(db.Model):
     prix = db.Column(db.Float, nullable=True)
     sous_categorie_id = db.Column(db.Integer, db.ForeignKey('sous_categorie.id'), nullable=False)
     fournitures = db.relationship('Fourniture', secondary=retouche_fournitures, lazy='subquery',
-        backref=db.backref('details_retouche', lazy=True))
+    backref=db.backref('details_retouche', lazy=True))
     
     def __repr__(self):
         return f'<DetailRetouche {self.nom}>'
@@ -86,24 +87,37 @@ class Client(db.Model):
     nom = db.Column(db.String(100), nullable=False)
     numero_telephone = db.Column(db.String(20), nullable=False, unique=True)  # Un numéro de téléphone unique
     retouches = db.relationship('Retouche', backref='client', lazy='dynamic', cascade="all, delete-orphan")
+    tickets = db.relationship('Ticket', backref='client', lazy=True)
 
     def __repr__(self):
         return f'<Client {self.nom} - {self.numero_telephone}>'
     
 class Retouche(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
     client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False)
-    prix = db.Column(db.Float, nullable=True) 
+    ticket_id = db.Column(db.Integer, db.ForeignKey('ticket.id'), nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
+    prix = db.Column(db.Float, nullable=True)
     description = db.Column(db.Text, nullable=True)
     statut = db.Column(db.String(20), default='En cours')
-    date_echeance = db.Column(db.Date, nullable=True)
-    essayage_boutique = db.Column(db.Boolean, default=False)  # Nouveau champ
-    
+    essayage_boutique = db.Column(db.Boolean, default=False)
     detail_retouche_id = db.Column(db.Integer, db.ForeignKey('detail_retouche.id'), nullable=True)
     detail = db.relationship('DetailRetouche', backref='retouches')
 
     def __repr__(self):
-        return f'<Retouche {self.id} pour {self.nom_client}>'
+        return f'<Retouche {self.id} pour ticket {self.ticket_id}>'
+
+# --- MODÈLE TICKET ---
+class Ticket(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False)
+    date_creation = db.Column(db.DateTime, default=datetime.utcnow)
+    date_echeance = db.Column(db.Date, nullable=True)
+    statut = db.Column(db.String(20), default='En cours')
+    commentaire = db.Column(db.Text, nullable=True)
+    retouches = db.relationship('Retouche', backref='ticket', cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f'<Ticket {self.id} pour client {self.client_id}>'
 
 
 # --- CRÉATION INITIALE DE LA BASE DE DONNÉES ---
@@ -126,9 +140,10 @@ def index():
     ).all()
     schedule_data = {emp.id: {} for emp in employes}
     for shift in shifts_semaine:
-        if shift.date not in schedule_data.get(shift.employe_id, {}):
-            schedule_data[shift.employe_id][shift.date] = []
-        schedule_data[shift.employe_id][shift.date].append(shift)
+        if shift.employe_id in schedule_data:
+            if shift.date not in schedule_data[shift.employe_id]:
+                schedule_data[shift.employe_id][shift.date] = []
+            schedule_data[shift.employe_id][shift.date].append(shift)
     week_dates = [start_week + timedelta(days=i) for i in range(5)]
     jours_fr = ['Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
     # Ajout des congés si utilisés dans le template
@@ -205,10 +220,16 @@ def ajouter_retouche():
         prixs = request.form.getlist('prix[]')
         descriptions = request.form.getlist('description[]')
         quantites = request.form.getlist('quantite[]')
-        essayage_boutique = request.form.get('essayage_boutique') == 'on'  # Nouveau champ
-        
-        retouches_creees = []
+        essayage_boutique = request.form.get('essayage_boutique') == 'on'
+        commentaire = request.form.get('commentaire')
+
         total_ht = 0.0
+        retouches_creees = []
+
+        # Création du ticket (date_echeance = date_obj)
+        nouveau_ticket = Ticket(client_id=client.id, date_echeance=date_obj, commentaire=commentaire)
+        db.session.add(nouveau_ticket)
+        db.session.flush()  # Pour obtenir l'ID du ticket
 
         for i in range(len(detail_ids)):
             detail_id = detail_ids[i]
@@ -232,11 +253,11 @@ def ajouter_retouche():
                         fourniture.quantite -= 1
                 nouvelle_retouche = Retouche(
                     client_id=client.id,
+                    ticket_id=nouveau_ticket.id,
                     prix=prix_retouche,
                     description=description,
-                    date_echeance=date_obj,
                     detail_retouche_id=detail.id if detail else None,
-                    essayage_boutique=essayage_boutique  # Nouveau champ
+                    essayage_boutique=essayage_boutique
                 )
                 db.session.add(nouvelle_retouche)
                 retouches_creees.append(nouvelle_retouche)
@@ -248,20 +269,18 @@ def ajouter_retouche():
         tva_rate = app.config['TVA_RATE']
         montant_tva = total_ht * tva_rate
         total_ttc = total_ht + montant_tva
-        
-        # On utilise l'ID de la première retouche comme numéro de ticket
-        numero_ticket = retouches_creees[0].id if retouches_creees else None
-        
+
         now = datetime.now()
         now_fr = now.strftime('%A %d %B %Y')
-        return render_template('ticket.html', 
+        return render_template('ticket.html',
                                client=client,
+                               ticket=nouveau_ticket,
                                retouches=retouches_creees,
                                total_ht=total_ht,
                                montant_tva=montant_tva,
                                total_ttc=total_ttc,
                                tva_rate=tva_rate,
-                               numero_ticket=numero_ticket,
+                               numero_ticket=nouveau_ticket.id,
                                now=now,
                                now_fr=now_fr)
     
@@ -277,7 +296,6 @@ def ajouter_retouche():
 
 # --- ROUTES MANQUANTES RÉINTÉGRÉES ET MISES À JOUR ---
 
-@app.route("/planning", methods=['GET', 'POST'])
 @app.route("/planning", methods=['GET', 'POST'])
 def planning():
     semaine = int(request.args.get('semaine', 0))
@@ -487,8 +505,6 @@ def ajouter_sous_categorie():
         db.session.commit()
     return redirect(url_for('parametres'))
 
-# Dans votre fichier app.py (ou équivalent)
-
 @app.route('/parametres/detail/ajouter', methods=['POST'])
 def ajouter_detail_retouche():
     nom = request.form.get('nom')
@@ -533,6 +549,22 @@ def supprimer_parametre(type, id):
     db.session.commit()
     return redirect(url_for('parametres'))
 
+# Route pour modifier un employé
+@app.route('/modifier_employe/<int:employe_id>', methods=['POST'])
+def modifier_employe(employe_id):
+    employe = Employe.query.get_or_404(employe_id)
+    nom = request.form.get('nom')
+    role = request.form.get('role')
+    couleur = request.form.get('couleur')
+    if nom:
+        employe.nom = nom
+    if role:
+        employe.role = role
+    if couleur:
+        employe.couleur = couleur
+    db.session.commit()
+    return redirect(url_for('parametres'))
+
 @app.route('/parametres/employe/ajouter', methods=['POST'])
 def ajouter_employe():
     nom = request.form.get('nom')
@@ -568,8 +600,6 @@ def modifier_sous_categorie(id):
         sous_categorie.nom = nouveau_nom
         db.session.commit()
     return redirect(url_for('parametres'))
-
-# Dans votre fichier app.py (ou équivalent)
 
 @app.route('/parametres/detail/modifier/<int:detail_id>', methods=['POST'])
 def modifier_detail_retouche(detail_id):
@@ -983,46 +1013,46 @@ def planning_employe():
 def planning_retouches_mensuel():
     return render_template('planning_retouches_mensuel.html')
 
+
 @app.route('/api/retouche_events')
 def api_retouche_events():
-    # 1. On regroupe toutes les retouches par client et par date
-    grouped_retouches = defaultdict(list)
-    all_retouches = Retouche.query.order_by(Retouche.id).all()
-    for r in all_retouches:
-        if r.date_echeance and r.client:
-            grouped_retouches[(r.date_echeance, r.client)].append(r)
-
-    # 2. On crée un événement de calendrier unique pour chaque groupe
+    # On récupère tous les tickets et leurs retouches associées
+    tous_les_tickets = Ticket.query.options(db.joinedload(Ticket.retouches).joinedload(Retouche.detail)).all()
     events = []
-    for (date, client), retouches_list in grouped_retouches.items():
-        # On compte les types de retouches pour faire un résumé
-        summary_counter = Counter(
-            r.detail.nom for r in retouches_list if r.detail
-        )
-        # On transforme ce résumé en une liste de textes
-        summary_text_list = [f"{count} x {name}" for name, count in summary_counter.items()]
-        # On vérifie si TOUTES les retouches du lot sont terminées
-        is_all_terminated = all(r.statut == 'Terminée' for r in retouches_list)
-        events.append({
-            'title': client.nom,
-            'start': date.strftime('%Y-%m-%d'),
-            'url': url_for('detail_retouche', id=retouches_list[0].id),
-            'className': 'tache-terminee' if is_all_terminated else '',
-            'extendedProps': {
-                'summary': summary_text_list
-            }
-        })
+    for ticket in tous_les_tickets:
+        # On s'assure que le ticket a au moins une retouche et une date d'échéance
+        if not ticket.retouches or not ticket.date_echeance:
+            continue
+
+        # On prend la date d'échéance du ticket
+        date = ticket.date_echeance
+        # On crée un résumé des prestations
+        summary_list = [r.detail.nom for r in ticket.retouches if r.detail]
+        # On vérifie si toutes les retouches du ticket sont terminées
+        is_all_terminated = all(r.statut == 'Terminée' for r in ticket.retouches)
+        for retouche in ticket.retouches:
+            events.append({
+                'title': f"{retouche.client.nom} - {retouche.detail.nom if retouche.detail else 'Prestation non spécifiée'}",
+                'start': date.strftime('%Y-%m-%d'),
+                'url': url_for('detail_ticket', ticket_id=ticket.id),
+                'className': 'tache-terminee' if is_all_terminated else '',
+                'extendedProps': {
+                    'summary': summary_list
+                }
+            })
     return jsonify(events)
 
 
-# Nouvelle route pour réimprimer le ticket d'une retouche
-@app.route('/ticket/<int:retouche_id>/reimprimer')
-def reimprimer_ticket(retouche_id):
+
+# Nouvelle route pour réimprimer le ticket (par ticket_id)
+@app.route('/ticket/<int:ticket_id>/reimprimer')
+def reimprimer_ticket(ticket_id):
     import locale
     locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
-    retouche = Retouche.query.get_or_404(retouche_id)
-    client = retouche.client
-    total_ht = retouche.prix or 0.0
+    ticket = Ticket.query.get_or_404(ticket_id)
+    client = ticket.client
+    retouches = ticket.retouches
+    total_ht = sum(r.prix or 0.0 for r in retouches)
     tva_rate = app.config.get('TVA_RATE', 0.2)
     montant_tva = total_ht * tva_rate
     total_ttc = total_ht + montant_tva
@@ -1031,12 +1061,13 @@ def reimprimer_ticket(retouche_id):
     return render_template(
         'ticket.html',
         client=client,
-        retouches=[retouche],
+        ticket=ticket,
+        retouches=retouches,
         total_ht=total_ht,
         montant_tva=montant_tva,
         total_ttc=total_ttc,
         tva_rate=tva_rate,
-        numero_ticket=retouche.id,
+        numero_ticket=ticket.id,
         now=now,
         now_fr=now_fr
     )
@@ -1062,3 +1093,183 @@ def supprimer_retouche(id):
     db.session.commit()
     flash('La retouche a bien été supprimée.', 'success')
     return redirect(url_for('planning_retouches_mensuel'))
+
+# Route pour modifier un shift
+@app.route('/shift/modifier/<int:shift_id>', methods=['GET', 'POST'])
+def modifier_shift(shift_id):
+    shift = PlanningShift.query.get_or_404(shift_id)
+    if request.method == 'POST':
+        date_str = request.form.get('date')
+        heure_debut_str = request.form.get('heure_debut')
+        heure_fin_str = request.form.get('heure_fin')
+        tache = request.form.get('tache')
+        from datetime import datetime, time
+        if date_str:
+            shift.date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        if heure_debut_str:
+            shift.heure_debut = time.fromisoformat(heure_debut_str)
+        if heure_fin_str:
+            shift.heure_fin = time.fromisoformat(heure_fin_str)
+        shift.tache = tache
+        db.session.commit()
+        flash('Événement modifié avec succès.', 'success')
+        return redirect(url_for('index'))
+    return render_template('modifier_shift.html', shift=shift)
+
+# Gestion suppression d'un shift depuis la modale de l'agenda
+@app.route('/shift/supprimer/<int:shift_id>', methods=['POST'])
+def supprimer_shift(shift_id):
+    shift = PlanningShift.query.get_or_404(shift_id)
+    db.session.delete(shift)
+    db.session.commit()
+    flash('Événement supprimé avec succès.', 'success')
+    return redirect(url_for('index'))
+
+# --- API pour modifier le prix d'une prestation ---
+@app.route('/api/prestation/update_price', methods=['POST'])
+def update_prestation_price():
+    data = request.get_json()
+    prestation_id = data.get('prestation_id')
+    nouveau_prix = data.get('nouveau_prix')
+
+    prestation = DetailRetouche.query.get(prestation_id)
+    if prestation:
+        try:
+            prestation.prix = float(nouveau_prix)
+            db.session.commit()
+            return jsonify({'success': True, 'message': 'Prix mis à jour.'})
+        except (ValueError, TypeError):
+            return jsonify({'success': False, 'message': 'Le prix fourni est invalide.'}), 400
+    return jsonify({'success': False, 'message': 'Prestation non trouvée.'}), 404
+
+# Route AJAX pour modifier une présence/congé
+@app.route('/modifier_presence_conge', methods=['POST'])
+def modifier_presence_conge():
+    event_id = request.form.get('event_id')
+    type_evt = request.form.get('type')
+    date_debut = request.form.get('date_debut')
+    date_fin = request.form.get('date_fin')
+    employe_id = request.form.get('employe_id')
+    motif = request.form.get('motif')
+    try:
+        if type_evt == 'conge':
+            evt = CongeEmploye.query.get(int(event_id))
+            if not evt:
+                return jsonify({'success': False, 'error': 'Congé introuvable.'})
+            evt.date_debut = datetime.strptime(date_debut, '%Y-%m-%d').date()
+            evt.date_fin = datetime.strptime(date_fin, '%Y-%m-%d').date()
+            evt.employe_id = int(employe_id)
+            evt.motif = motif
+        else:
+            evt = PresenceEmploye.query.get(int(event_id))
+            if not evt:
+                return jsonify({'success': False, 'error': 'Présence introuvable.'})
+            evt.date = datetime.strptime(date_debut, '%Y-%m-%d').date()
+            evt.employe_id = int(employe_id)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+# Route pour supprimer une présence ou un congé
+@app.route('/presence_conge/supprimer', methods=['POST'])
+def supprimer_presence_conge():
+    employe_id = request.form.get('employe_id')
+    date_str = request.form.get('date')
+    from datetime import datetime
+    try:
+        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+        # Suppression des présences
+        PresenceEmploye.query.filter_by(employe_id=employe_id, date=date_obj).delete()
+        # Suppression des congés
+        CongeEmploye.query.filter_by(employe_id=employe_id, date_debut=date_obj, date_fin=date_obj).delete()
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+    
+    
+# --- NOUVELLE ROUTE POUR AFFICHER LE DÉTAIL D'UN TICKET ---
+@app.route('/ticket/<int:ticket_id>')
+def detail_ticket(ticket_id):
+    ticket = Ticket.query.get_or_404(ticket_id)
+    client = ticket.client
+    retouches = ticket.retouches
+    total_ht = sum(r.prix or 0.0 for r in retouches)
+    tva_rate = app.config.get('TVA_RATE', 0.2)
+    montant_tva = total_ht * tva_rate
+    total_ttc = total_ht + montant_tva
+    now = datetime.now()
+    now_fr = now.strftime('%A %d %B %Y')
+    return render_template(
+        'ticket_detail.html',
+        ticket=ticket,
+        client=client,
+        retouches=retouches,
+        total_ht=total_ht,
+        montant_tva=montant_tva,
+        total_ttc=total_ttc,
+        tva_rate=tva_rate,
+        now=now,
+        now_fr=now_fr
+    )
+
+# Dans routes.py ou un script dédié
+@app.route('/admin/reload_tarifs')
+def reload_tarifs():
+    seed_data()
+    return "Tarifs rechargés"
+
+    # Route d'administration pour vider les tarifs (prestations, sous-catégories, catégories)
+@app.route('/admin/clear_tarifs')
+def clear_tarifs():
+    # Supprime d'abord les détails de retouche
+    DetailRetouche.query.delete()
+    # Puis les sous-catégories
+    SousCategorie.query.delete()
+    # Puis les catégories
+    Categorie.query.delete()
+    db.session.commit()
+    return "Tarifs vidés. Vous pouvez maintenant recharger la grille tarifaire."
+
+    # --- API pour modifier une retouche individuellement (AJAX depuis ticket_detail) ---
+@app.route('/api/retouche/modifier/<int:retouche_id>', methods=['POST'])
+def modifier_retouche_api(retouche_id):
+    retouche = Retouche.query.get_or_404(retouche_id)
+    data = request.get_json()
+
+    if not data:
+        return jsonify({'success': False, 'message': 'Données manquantes.'}), 400
+
+    # Mettre à jour les champs fournis
+    retouche.description = data.get('description', retouche.description)
+    retouche.statut = data.get('statut', retouche.statut)
+    try:
+        if 'prix' in data and data['prix'] is not None:
+            retouche.prix = float(data['prix'])
+    except (ValueError, TypeError):
+        return jsonify({'success': False, 'message': 'Prix invalide.'}), 400
+    db.session.commit()
+    return jsonify({'success': True, 'message': 'Retouche mise à jour.'})
+
+# --- MODIFICATION GROUPEE DES RETOUCHES D'UN TICKET ---
+@app.route('/ticket/<int:ticket_id>/modifier', methods=['GET', 'POST'])
+def modifier_ticket(ticket_id):
+    ticket = Ticket.query.get_or_404(ticket_id)
+    if request.method == 'POST':
+        for retouche in ticket.retouches:
+            prix = request.form.get(f'prix_{retouche.id}')
+            statut = request.form.get(f'statut_{retouche.id}')
+            description = request.form.get(f'description_{retouche.id}')
+            if prix is not None:
+                try:
+                    retouche.prix = float(prix)
+                except (ValueError, TypeError):
+                    pass
+            if statut is not None:
+                retouche.statut = statut
+            if description is not None:
+                retouche.description = description
+        db.session.commit()
+        return redirect(url_for('detail_ticket', ticket_id=ticket.id))
+    return render_template('modifier_ticket.html', ticket=ticket)

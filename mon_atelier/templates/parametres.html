@@ -1,427 +1,278 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="section" style="background: #eaf3fa; min-height: 100vh;">
+<section class="section" style="background: #f7f8fa; min-height: 100vh;">
     <div class="container">
-        <div class="box" style="max-width: 1400px; margin: 0 auto; border-radius: 18px; box-shadow: 0 2px 8px #ececff;">
-            <h1 class="title has-text-centered" style="color:#6c63ff;">Paramètres</h1>
-            <h2 class="subtitle has-text-centered" style="color:#888;">Gérez les prestations, l'équipe et l'inventaire</h2>
-            <div class="columns">
-
-            <!-- COLONNE DE GAUCHE : ÉQUIPE & INVENTAIRE -->
+        <div class="columns">
+            <!-- COLONNE GAUCHE : ÉQUIPE & INVENTAIRE -->
             <div class="column is-one-third">
-                <!-- BOX ÉQUIPE -->
                 <div class="box mb-5">
                     <h2 class="title is-4">Équipe</h2>
-                    <p class="subtitle is-6">Ajoutez ou supprimez des employés.</p>
                     <table class="table is-fullwidth is-hoverable">
                         <thead>
-                            <tr>
-                                <th>Couleur</th>
-                                <th>Nom</th>
-                                <th>Rôle</th>
-                                <th></th>
-                            </tr>
+                            <tr><th>Nom</th><th>Rôle</th><th>Couleur</th><th></th></tr>
                         </thead>
                         <tbody>
                             {% for employe in employes %}
                             <tr>
-                                <td class="has-text-centered"><span class="color-swatch" style="--employee-color: {{ employe.couleur }};" title="Couleur: {{ employe.couleur }}"></span></td>
-                                <td>{{ employe.nom }}</td> 
+                                <td>{{ employe.nom }}</td>
                                 <td>{{ employe.role }}</td>
+                                <td>
+                                    {% if employe.couleur %}
+                                        <span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:{{ employe.couleur }}; border:1px solid #ccc;vertical-align:middle;"></span>
+                                        <span style="font-size:0.9em;vertical-align:middle;">{{ employe.couleur }}</span>
+                                    {% else %}-{% endif %}
+                                </td>
                                 <td class="has-text-right">
-                                    <form method="post" action="{{ url_for('supprimer_employe', employe_id=employe.id) }}" onsubmit="return confirm('Voulez-vous vraiment supprimer cet employé ?');">
-                                        <button class="button is-danger is-small is-light" title="Supprimer">X</button>
+                                    <button class="button is-small is-info js-edit-employe" data-id="{{ employe.id }}" data-nom="{{ employe.nom }}" data-role="{{ employe.role }}" data-couleur="{{ employe.couleur or '' }}">Modifier</button>
+                                    <form method="post" action="{{ url_for('supprimer_employe', employe_id=employe.id) }}" style="display:inline;">
+                                        <button class="button is-danger is-small ml-1" onclick="return confirm('Supprimer cet employé ?');">Supprimer</button>
                                     </form>
                                 </td>
                             </tr>
                             {% else %}
-                            <tr>
-                                <td colspan="4" class="has-text-centered">Aucun employé ajouté.</td>
-                            </tr>
+                            <tr><td colspan="4" class="has-text-centered">Aucun employé.</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
-                    <hr>
-                    <h3 class="title is-5">Ajouter un employé</h3>
-                    <form method="post" action="{{ url_for('ajouter_employe') }}">
-                        <div class="field">
-                            <label class="label">Nom</label>
-                            <div class="control">
-                                <input class="input" type="text" name="nom" placeholder="Ex: Sophie" required>
-                            </div>
-                        </div>
-                        <div class="field">
-                            <label class="label">Rôle</label>
-                            <div class="control">
-                                <input class="input" type="text" name="role" placeholder="Ex: Apprentie" required>
-                            </div>
-                        </div>
-                        <div class="field">
-                            <label class="label">Couleur pour le planning</label>
-                            <div class="control">
-                                <input class="input" type="color" name="couleur" value="#8A9BCA" required>
-                            </div>
-                        </div>
-                        <div class="control">
-                            <button class="button is-primary">Ajouter à l'équipe</button>
-                        </div>
-                    </form>
+                    <button class="button is-primary is-fullwidth mt-2" id="btn-ajouter-employe">Ajouter un employé</button>
                 </div>
-
-                <!-- BOX INVENTAIRE AVEC FLECHE DEROULANTE -->
-                <div class="box">
-                  <div style="display:flex; align-items:center; cursor:pointer;" id="toggle-inventaire">
-                    <h2 class="title is-4" style="flex:1; margin-bottom:0;">Inventaire</h2>
-                    <span id="inventaire-arrow" style="transition: transform 0.2s; font-size:1.5rem;">
-                      &#9660;
-                    </span>
-                  </div>
-                  <div id="inventaire-content">
-                    <p class="subtitle is-6">Gérez votre stock de fournitures.</p>
-                    <table class="table is-fullwidth is-hoverable is-narrow">
-                        <thead>
-                            <tr>
-                                <th>Nom</th>
-                                <th>Réf.</th>
-                                <th class="has-text-centered">Qté</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for fourniture in fournitures %}
-                            <tr>
-                                <td>{{ fourniture.nom }}</td>
-                                <td>{{ fourniture.reference or '-' }}</td>
-                                <td class="has-text-centered">{{ fourniture.quantite }}</td>
-                                <td class="has-text-right">
-                                    <button class="button is-small is-light js-edit-button"
-                                            data-type="fourniture" data-id="{{ fourniture.id }}"
-                                            data-nom="{{ fourniture.nom }}" data-reference="{{ fourniture.reference or '' }}"
-                                            data-quantite="{{ fourniture.quantite }}">✏️</button>
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="4" class="has-text-centered">Aucune fourniture en stock.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                    <hr>
-                    <h3 class="title is-5">Ajouter une fourniture</h3>
-                    <form method="post" action="{{ url_for('ajouter_fourniture') }}">
-                        <div class="field">
-                            <label class="label">Nom de la fourniture</label>
-                            <input class="input" type="text" name="nom" placeholder="Ex: Fermeture éclair 20cm" required>
-                        </div>
-                        <div class="field">
-                            <label class="label">Référence (optionnel)</label>
-                            <input class="input" type="text" name="reference" placeholder="Ex: YKK-444">
-                        </div>
-                        <div class="field">
-                            <label class="label">Quantité en stock</label>
-                            <input class="input" type="number" name="quantite" value="0" required>
-                        </div>
-                        <div class="control">
-                            <button type="submit" class="button is-primary">Ajouter au stock</button>
-                        </div>
-                    </form>
-                  </div>
-                </div>
-            </div>
-
-            <!-- COLONNE DE DROITE : PRESTATIONS -->
-            <div class="column is-two-thirds">
-                <div class="box">
-                    <h2 class="title is-4">Prestations</h2>
-                    <p class="subtitle is-6">Gérez les catégories et les tarifs. Cliquez pour déplier/replier une catégorie.</p>
-                    
-                    <!-- Bouton pour ajouter une nouvelle catégorie -->
-                    <div class="mb-4">
-                        <form method="post" action="{{ url_for('ajouter_categorie') }}">
-                            <div class="field has-addons">
-                                <div class="control is-expanded">
-                                    <input class="input" type="text" name="nom" placeholder="Nouvelle catégorie" required>
-                                </div>
-                                <div class="control">
-                                    <button class="button is-primary">Ajouter catégorie</button>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-
-                    <!-- Accordéons pour les catégories -->
-                    {% for cat in categories %}
-                    <div class="accordion-item mb-4">
-                        <div class="accordion-header has-background-primary-light" onclick="toggleAccordion('cat-{{ cat.id }}')">
-                            <div class="level is-mobile p-3">
-                                <div class="level-left">
-                                    <div class="level-item">
-                                        <span class="icon">
-                                            <i class="fas fa-chevron-right accordion-icon" id="icon-cat-{{ cat.id }}"></i>
-                                        </span>
-                                        <strong class="ml-2">{{ cat.nom }}</strong>
-                                        <span class="tag is-light ml-2">{{ cat.sous_categories.count() }} sous-catégories</span>
+                                <div class="box">
+                                    <div style="display:flex; align-items:center; cursor:pointer;" id="toggle-inventaire">
+                                        <h2 class="title is-4" style="flex:1; margin-bottom:0;">Inventaire</h2>
+                                        <span id="inventaire-arrow" style="transition: transform 0.2s; font-size:1.5rem;">&#9660;</span>
                                     </div>
-                                </div>
-                                <div class="level-right">
-                                    <div class="level-item">
-                                        <button class="button is-small is-light js-edit-button"
-                                                data-type="categorie" data-id="{{ cat.id }}" data-nom="{{ cat.nom }}"
-                                                onclick="event.stopPropagation();">✏️</button>
-                                        <form method="post" action="{{ url_for('supprimer_parametre', type='categorie', id=cat.id) }}" 
-                                              onsubmit="return confirm('Voulez-vous vraiment supprimer cette catégorie et toutes ses sous-catégories ?');"
-                                              style="display: inline;" onclick="event.stopPropagation();">
-                                            <button class="button is-danger is-small is-light ml-1">🗑️</button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="accordion-content" id="cat-{{ cat.id }}" style="display: none;">
-                            <div class="p-4 has-background-white-bis">
-                                <!-- Formulaire pour ajouter une sous-catégorie -->
-                                <div class="mb-4">
-                                    <form method="post" action="{{ url_for('ajouter_sous_categorie') }}">
-                                        <input type="hidden" name="categorie_id" value="{{ cat.id }}">
-                                        <div class="field has-addons">
-                                            <div class="control is-expanded">
-                                                <input class="input is-small" type="text" name="nom" placeholder="Nouvelle sous-catégorie" required>
-                                            </div>
-                                            <div class="control">
-                                                <button class="button is-link is-small">Ajouter</button>
-                                            </div>
-                                        </div>
-                                    </form>
-                                </div>
-
-                                <!-- Sous-catégories sous forme d'accordéons -->
-                                {% for sc in cat.sous_categories %}
-                                <div class="accordion-sub-item mb-3">
-                                    <div class="accordion-sub-header has-background-info-light" onclick="toggleAccordion('sub-{{ sc.id }}')">
-                                        <div class="level is-mobile p-2">
-                                            <div class="level-left">
-                                                <div class="level-item">
-                                                    <span class="icon is-small">
-                                                        <i class="fas fa-chevron-right accordion-icon" id="icon-sub-{{ sc.id }}"></i>
-                                                    </span>
-                                                    <strong class="ml-2">{{ sc.nom }}</strong>
-                                                    <span class="tag is-white is-small ml-2">{{ sc.details_retouches.count() }} prestations</span>
-                                                </div>
-                                            </div>
-                                            <div class="level-right">
-                                                <div class="level-item">
-                                                    <button class="button is-small is-light js-edit-button"
-                                                            data-type="sous_categorie" data-id="{{ sc.id }}" data-nom="{{ sc.nom }}"
-                                                            onclick="event.stopPropagation();">✏️</button>
-                                                    <form method="post" action="{{ url_for('supprimer_parametre', type='sous_categorie', id=sc.id) }}" 
-                                                          onsubmit="return confirm('Voulez-vous vraiment supprimer cette sous-catégorie et toutes ses prestations ?');"
-                                                          style="display: inline;" onclick="event.stopPropagation();">
-                                                        <button class="button is-danger is-small is-light ml-1">🗑️</button>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="accordion-sub-content" id="sub-{{ sc.id }}" style="display: none;">
-                                        <div class="p-3 has-background-white">
-                                            <!-- Liste des prestations -->
-                                            {% if sc.details_retouches %}
-                                            <table class="table is-fullwidth is-narrow is-hoverable">
+                                    <div id="inventaire-content">
+                                        <table class="table is-fullwidth is-hoverable is-narrow">
                                                 <thead>
-                                                    <tr>
-                                                        <th>Prestation</th>
-                                                        <th class="has-text-right">Prix</th>
-                                                        <th class="has-text-centered">Fournitures</th>
-                                                        <th class="has-text-right">Actions</th>
-                                                    </tr>
+                                                        <tr><th>Nom</th><th>Réf.</th><th class="has-text-centered">Qté</th><th></th></tr>
                                                 </thead>
                                                 <tbody>
-                                                    {% for detail in sc.details_retouches %}
-                                                    <tr>
-                                                        <td>{{ detail.nom }}</td>
-                                                        <td class="has-text-right">
-                                                            {% if detail.prix %}
-                                                                <span class="tag is-success">{{ "%.2f €"|format(detail.prix) }}</span>
-                                                            {% else %}
-                                                                <span class="tag is-warning">Sur devis</span>
-                                                            {% endif %}
-                                                        </td>
-                                                        <td class="has-text-centered">
-                                                            {% if detail.fournitures %}
-                                                                <span class="icon has-text-info" title="{{ detail.fournitures|map(attribute='nom')|join(', ') }}">
-                                                                    <i class="fas fa-link"></i>
-                                                                </span>
-                                                                <span class="tag is-light is-small">{{ detail.fournitures|length }}</span>
-                                                            {% else %}
-                                                                <span class="icon has-text-grey-light">
-                                                                    <i class="fas fa-minus"></i>
-                                                                </span>
-                                                            {% endif %}
-                                                        </td>
-                                                        <td class="has-text-right">
-                                                            <button class="button is-small is-info js-modal-trigger"
-                                                                data-target="modal-edit-prestation"
-                                                                data-id="{{ detail.id }}"
-                                                                data-nom="{{ detail.nom }}"
-                                                                data-prix="{{ detail.prix }}">
-                                                                Modifier
-                                                            </button>
-                                                            <form method="post" action="{{ url_for('supprimer_parametre', type='detail', id=detail.id) }}" style="display:inline;">
-                                                                <button class="button is-danger is-small ml-1" onclick="return confirm('Voulez-vous vraiment supprimer cette prestation ?');">Supprimer</button>
-                                                            </form>
-                                                        </td>
-                                                    </tr>
-                                                    {% endfor %}
+                                                        {% for fourniture in fournitures %}
+                                                        <tr>
+                                                                <td>{{ fourniture.nom }}</td>
+                                                                <td>{{ fourniture.reference or '-' }}</td>
+                                                                <td class="has-text-centered">{{ fourniture.quantite }}</td>
+                                                                <td class="has-text-right">
+                                                                        <button class="button is-small is-info js-edit-fourniture" data-id="{{ fourniture.id }}" data-nom="{{ fourniture.nom }}" data-reference="{{ fourniture.reference or '' }}" data-quantite="{{ fourniture.quantite }}">Modifier</button>
+                                                                        <form method="post" action="{{ url_for('supprimer_parametre', type='fourniture', id=fourniture.id) }}" style="display:inline;">
+                                                                                <button class="button is-danger is-small ml-1" onclick="return confirm('Supprimer cette fourniture ?');">Supprimer</button>
+                                                                        </form>
+                                                                </td>
+                                                        </tr>
+                                                        {% else %}
+                                                        <tr><td colspan="4" class="has-text-centered">Aucune fourniture.</td></tr>
+                                                        {% endfor %}
                                                 </tbody>
-                                            </table>
-<!-- MODALE DE MODIFICATION DE PRESTATION -->
-<div class="modal" id="modal-edit-prestation">
-    <div class="modal-background"></div>
-    <div class="modal-card">
-        <header class="modal-card-head">
-            <p class="modal-card-title">Modifier la prestation</p>
-            <button class="delete" aria-label="close" id="close-modal-edit-prestation"></button>
-        </header>
-        <form id="form-edit-prestation" method="POST">
-            <section class="modal-card-body">
-                <div class="field">
-                    <label class="label">Nom</label>
-                    <div class="control">
-                        <input class="input" type="text" name="nom" id="edit-prestation-nom" required>
-                    </div>
-                </div>
-                <div class="field">
-                    <label class="label">Prix (€)</label>
-                    <div class="control">
-                        <input class="input" type="number" step="0.01" name="prix" id="edit-prestation-prix">
-                    </div>
-                </div>
-            </section>
-            <footer class="modal-card-foot">
-                <button type="submit" class="button is-primary">Enregistrer</button>
-                <button type="button" class="button" id="cancel-modal-edit-prestation">Annuler</button>
-            </footer>
-        </form>
-    </div>
-</div>
-                                            {% else %}
-                                            <p class="has-text-grey has-text-centered p-4">Aucune prestation dans cette sous-catégorie</p>
-                                            {% endif %}
-                                            
-                                            <!-- Formulaire pour ajouter une prestation -->
-                                            <div class="mt-4 p-3 has-background-light">
-                                                <h5 class="title is-6">Ajouter une prestation</h5>
-                                                <form method="post" action="{{ url_for('ajouter_detail_retouche') }}">
-                                                    <input type="hidden" name="sous_categorie_id" value="{{ sc.id }}">
-                                                    <div class="columns">
-                                                        <div class="column">
-                                                            <div class="field">
-                                                                <label class="label is-small">Nom de la prestation</label>
-                                                                <input class="input is-small" type="text" name="nom" placeholder="Ex: Raccourcir manches" required>
-                                                            </div>
-                                                        </div>
-                                                        <div class="column">
-                                                            <div class="field">
-                                                                <label class="label is-small">Prix (€)</label>
-                                                                <input class="input is-small" type="number" step="0.01" name="prix" placeholder="Laisser vide pour 'Sur devis'">
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="field">
-                                                        <label class="label is-small">Fournitures utilisées (optionnel)</label>
-                                                        <div class="control select is-multiple is-small is-fullwidth">
-                                                            <select name="fournitures" multiple size="3">
-                                                                {% for f in fournitures %}
-                                                                <option value="{{ f.id }}" {% if f.quantite <= 0 %}disabled{% endif %}>
-                                                                    {{ f.nom }} (Stock: {{ f.quantite }}) {% if f.quantite <= 0 %}- Épuisé{% endif %}
-                                                                </option>
-                                                                {% endfor %}
-                                                            </select>
-                                                        </div>
-                                                    </div>
-                                                    <div class="control">
-                                                        <button class="button is-success is-small">Ajouter cette prestation</button>
-                                                    </div>
-                                                </form>
-                                            </div>
-                                        </div>
+                                        </table>
+                                        <button class="button is-primary is-fullwidth mt-2" id="btn-ajouter-fourniture">Ajouter une fourniture</button>
                                     </div>
                                 </div>
-                                {% else %}
-                                <p class="has-text-grey has-text-centered p-4">Aucune sous-catégorie dans cette catégorie</p>
+            </div>
+            <!-- COLONNE DROITE : PRESTATIONS -->
+            <div class="column is-two-thirds">
+                <div class="box">
+                  <div style="display:flex; align-items:center; cursor:pointer;" id="toggle-prestations">
+                    <h2 class="title is-4" style="flex:1; margin-bottom:0;">Prestations & Tarifs</h2>
+                    <span id="prestations-arrow" style="transition: transform 0.2s; font-size:1.5rem;">&#9660;</span>
+                  </div>
+                  <div id="prestations-content">
+                    <button class="button is-primary mb-3" id="btn-ajouter-categorie">Ajouter une catégorie</button>
+                    <div id="categories-accordeon">
+                        {% for cat in categories %}
+                        <div class="box mb-4">
+                            <div class="level is-mobile cat-toggle" style="cursor:pointer;" data-cat-id="{{ cat.id }}">
+                                <div class="level-left">
+                                    <span class="cat-arrow" style="transition: transform 0.2s; font-size:1.3rem; margin-right:8px;">&#9660;</span>
+                                    <strong class="is-size-5">{{ cat.nom }}</strong>
+                                </div>
+                                <div class="level-right">
+                                    <button class="button is-small is-info js-edit-categorie" data-id="{{ cat.id }}" data-nom="{{ cat.nom }}" onclick="event.stopPropagation();">Modifier</button>
+                                    <form method="post" action="{{ url_for('supprimer_parametre', type='categorie', id=cat.id) }}" style="display:inline;" onclick="event.stopPropagation();">
+                                        <button class="button is-danger is-small ml-1" onclick="return confirm('Supprimer cette catégorie et tout son contenu ?');">Supprimer</button>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="cat-content" data-cat-id="{{ cat.id }}">
+                                <button class="button is-link is-light is-small mt-2 mb-2 js-ajouter-sous-categorie" data-categorie-id="{{ cat.id }}">Ajouter une sous-catégorie</button>
+                                {% for sc in cat.sous_categories %}
+                                <div class="box mb-2">
+                                    <div class="level is-mobile">
+                                        <div class="level-left">
+                                            <span class="is-size-6">{{ sc.nom }}</span>
+                                        </div>
+                                        <div class="level-right">
+                                            <button class="button is-small is-info js-edit-sous-categorie" data-id="{{ sc.id }}" data-nom="{{ sc.nom }}">Modifier</button>
+                                            <form method="post" action="{{ url_for('supprimer_parametre', type='sous_categorie', id=sc.id) }}" style="display:inline;">
+                                                <button class="button is-danger is-small ml-1" onclick="return confirm('Supprimer cette sous-catégorie et ses prestations ?');">Supprimer</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    <button class="button is-link is-light is-small mt-2 mb-2 js-ajouter-prestation" data-sous-categorie-id="{{ sc.id }}">Ajouter une prestation</button>
+                                    <table class="table is-fullwidth is-hoverable is-narrow mt-2">
+                                        <thead>
+                                            <tr><th>Prestation</th><th>Prix</th><th></th></tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for detail in sc.details_retouches %}
+                                            <tr>
+                                                <td>{{ detail.nom }}</td>
+                                                <td class="has-text-right">
+                                                    <span class="price-text" data-id="{{ detail.id }}">{{ "%.2f"|format(detail.prix) if detail.prix is not none else '-' }}</span>
+                                                    <button class="button is-small is-info is-light edit-price-btn ml-2" data-id="{{ detail.id }}">Modifier</button>
+                                                </td>
+                                                <td class="has-text-right">
+                                                    <form method="post" action="{{ url_for('supprimer_parametre', type='detail', id=detail.id) }}" style="display:inline;">
+                                                        <button class="button is-danger is-small ml-1" onclick="return confirm('Supprimer cette prestation ?');">Supprimer</button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                            {% else %}
+                                            <tr><td colspan="3" class="has-text-centered">Aucune prestation.</td></tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
                                 {% endfor %}
                             </div>
                         </div>
+                        {% else %}
+                        <div class="notification is-info">Aucune catégorie créée.</div>
+                        {% endfor %}
                     </div>
-                    {% else %}
-                    <div class="notification is-info">
-                        <p>Aucune catégorie créée. Ajoutez votre première catégorie ci-dessus.</p>
-                    </div>
-                    {% endfor %}
+                  </div>
                 </div>
-            </div>
-        </div>
-    </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- FENÊTRE MODALE UNIQUE POUR L'ÉDITION -->
-<div id="edit-modal" class="modal">
+<!-- MODALES (pop-ups) pour édition/ajout -->
+<div id="modal-edit-employe" class="modal">
     <div class="modal-background"></div>
     <div class="modal-card">
         <header class="modal-card-head">
-            <p class="modal-card-title" id="edit-modal-title">Modifier</p>
+            <p class="modal-card-title">Modifier l'employé</p>
             <button class="delete" aria-label="close"></button>
         </header>
-        <form id="edit-form" method="post" action="">
+        <form id="form-edit-employe" method="post">
             <section class="modal-card-body">
-                <!-- Champ commun : Nom -->
                 <div class="field">
                     <label class="label">Nom</label>
-                    <input id="edit-nom" class="input" type="text" name="nom" required>
+                    <input class="input" type="text" name="nom" required>
                 </div>
-                
-                <!-- Champs pour les détails de prestation -->
-                <div id="edit-prix-field" class="field" style="display: none;">
-                    <label class="label">Prix (€)</label>
-                    <input id="edit-prix" class="input" type="number" step="0.01" name="prix" placeholder="Laisser vide pour 'Sur devis'">
+                <div class="field">
+                    <label class="label">Rôle</label>
+                    <input class="input" type="text" name="role" required>
                 </div>
-                <div id="edit-fournitures-field" class="field" style="display: none;">
-                    <label class="label">Fournitures utilisées (maintenir Ctrl pour sélectionner plusieurs)</label>
-                    <div class="control">
-                        <div class="select is-multiple is-fullwidth">
-                            <select id="edit-fournitures" name="fournitures" multiple size="5">
-                                {% for fourniture in fournitures %}
-                                    <option value="{{ fourniture.id }}" {% if fourniture.quantite <= 0 %}disabled{% endif %}>
-                                        {{ fourniture.nom }} (Stock: {{ fourniture.quantite }}) {% if fourniture.quantite <= 0 %}- Épuisé{% endif %}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Champs pour l'inventaire -->
-                <div id="edit-fourniture-fields" style="display: none;">
-                    <div class="field">
-                        <label class="label">Référence</label>
-                        <input id="edit-reference" class="input" type="text" name="reference">
-                    </div>
-                    <div class="field">
-                        <label class="label">Quantité</label>
-                        <input id="edit-quantite" class="input" type="number" name="quantite" required>
-                    </div>
+                <div class="field">
+                    <label class="label">Couleur (affichage planning)</label>
+                    <input class="input" type="color" name="couleur" style="width:60px; padding:0; height:2.5em;">
                 </div>
             </section>
             <footer class="modal-card-foot">
-                <button type="submit" class="button is-primary">Enregistrer</button>
-                <button type="button" class="button" id="modal-cancel-button">Annuler</button>
+                <button type="submit" class="button is-success">Enregistrer</button>
+                <button type="button" class="button js-close-modal">Annuler</button>
+            </footer>
+        </form>
+    </div>
+</div>
+
+<div id="modal-edit-fourniture" class="modal">
+    <div class="modal-background"></div>
+    <div class="modal-card">
+        <header class="modal-card-head">
+            <p class="modal-card-title">Modifier la fourniture</p>
+            <button class="delete" aria-label="close"></button>
+        </header>
+        <form id="form-edit-fourniture" method="post">
+            <section class="modal-card-body">
+                <div class="field">
+                    <label class="label">Nom</label>
+                    <input class="input" type="text" name="nom" required>
+                </div>
+                <div class="field">
+                    <label class="label">Référence</label>
+                    <input class="input" type="text" name="reference">
+                </div>
+                <div class="field">
+                    <label class="label">Quantité</label>
+                    <input class="input" type="number" name="quantite" required>
+                </div>
+            </section>
+            <footer class="modal-card-foot">
+                <button type="submit" class="button is-success">Enregistrer</button>
+                <button type="button" class="button js-close-modal">Annuler</button>
+            </footer>
+        </form>
+    </div>
+</div>
+
+<div id="modal-edit-categorie" class="modal">
+    <div class="modal-background"></div>
+    <div class="modal-card">
+        <header class="modal-card-head">
+            <p class="modal-card-title">Modifier la catégorie</p>
+            <button class="delete" aria-label="close"></button>
+        </header>
+        <form id="form-edit-categorie" method="post">
+            <section class="modal-card-body">
+                <div class="field">
+                    <label class="label">Nom</label>
+                    <input class="input" type="text" name="nom" required>
+                </div>
+            </section>
+            <footer class="modal-card-foot">
+                <button type="submit" class="button is-success">Enregistrer</button>
+                <button type="button" class="button js-close-modal">Annuler</button>
+            </footer>
+        </form>
+    </div>
+</div>
+
+<div id="modal-edit-sous-categorie" class="modal">
+    <div class="modal-background"></div>
+    <div class="modal-card">
+        <header class="modal-card-head">
+            <p class="modal-card-title">Modifier la sous-catégorie</p>
+            <button class="delete" aria-label="close"></button>
+        </header>
+        <form id="form-edit-sous-categorie" method="post">
+            <section class="modal-card-body">
+                <div class="field">
+                    <label class="label">Nom</label>
+                    <input class="input" type="text" name="nom" required>
+                </div>
+            </section>
+            <footer class="modal-card-foot">
+                <button type="submit" class="button is-success">Enregistrer</button>
+                <button type="button" class="button js-close-modal">Annuler</button>
+            </footer>
+        </form>
+    </div>
+</div>
+
+<div id="modal-edit-prestation" class="modal">
+    <div class="modal-background"></div>
+    <div class="modal-card">
+        <header class="modal-card-head">
+            <p class="modal-card-title">Modifier la prestation</p>
+            <button class="delete" aria-label="close"></button>
+        </header>
+        <form id="form-edit-prestation" method="post">
+            <section class="modal-card-body">
+                <div class="field">
+                    <label class="label">Nom</label>
+                    <input class="input" type="text" name="nom" required>
+                </div>
+                <div class="field">
+                    <label class="label">Prix (€)</label>
+                    <input class="input" type="number" step="0.01" name="prix">
+                </div>
+            </section>
+            <footer class="modal-card-foot">
+                <button type="submit" class="button is-success">Enregistrer</button>
+                <button type="button" class="button js-close-modal">Annuler</button>
             </footer>
         </form>
     </div>
@@ -430,54 +281,178 @@
 
 {% block scripts %}
 <script>
-// Script pour la modale d'édition de prestation
-document.addEventListener('DOMContentLoaded', function() {
-    // OUVERTURE DE LA MODALE
-    document.querySelectorAll('.js-modal-trigger[data-target="modal-edit-prestation"]').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            var modal = document.getElementById('modal-edit-prestation');
-            var form = document.getElementById('form-edit-prestation');
-            var nomInput = document.getElementById('edit-prestation-nom');
-            var prixInput = document.getElementById('edit-prestation-prix');
-            // Récupère les infos du bouton
-            var id = btn.getAttribute('data-id');
-            var nom = btn.getAttribute('data-nom');
-            var prix = btn.getAttribute('data-prix');
-            // Remplit les champs
-            nomInput.value = nom;
-            prixInput.value = (prix !== 'None' && prix !== 'null') ? prix : '';
-            // Met à jour l'action du formulaire
-            form.action = '/parametres/detail/modifier/' + id;
-            // Affiche la modale
-            modal.classList.add('is-active');
-        });
-    });
-    // FERMETURE DE LA MODALE
-    function closeModalEditPrestation() {
-        document.getElementById('modal-edit-prestation').classList.remove('is-active');
+// Accordéons
+window.toggleAccordion = function(id, arrowId) {
+    var content = document.getElementById(id);
+    if (content) {
+        if(content.style.display === 'none' || content.style.display === '') {
+            content.style.display = 'block';
+            if(arrowId) {
+                var arrow = document.getElementById(arrowId);
+                if(arrow) arrow.style.transform = 'rotate(0deg)';
+            }
+        } else {
+            content.style.display = 'none';
+            if(arrowId) {
+                var arrow = document.getElementById(arrowId);
+                if(arrow) arrow.style.transform = 'rotate(-90deg)';
+            }
+        }
     }
-    document.getElementById('close-modal-edit-prestation').addEventListener('click', closeModalEditPrestation);
-    document.getElementById('cancel-modal-edit-prestation').addEventListener('click', closeModalEditPrestation);
-    document.querySelector('#modal-edit-prestation .modal-background').addEventListener('click', closeModalEditPrestation);
-    document.addEventListener('keydown', function(event) {
-        if (event.key === "Escape") closeModalEditPrestation();
-    });
+};
 
-    // Script pour la flèche déroulante Inventaire (repris)
-    var toggle = document.getElementById('toggle-inventaire');
-    var content = document.getElementById('inventaire-content');
-    var arrow = document.getElementById('inventaire-arrow');
-    if(toggle && content && arrow) {
-        toggle.addEventListener('click', function() {
-            if(content.style.display === 'none') {
-                content.style.display = '';
-                arrow.style.transform = 'rotate(0deg)';
+document.addEventListener('DOMContentLoaded', function () {
+    // --- Accordéon Inventaire ---
+    var toggleInv = document.getElementById('toggle-inventaire');
+    var invContent = document.getElementById('inventaire-content');
+    var invArrow = document.getElementById('inventaire-arrow');
+    if(toggleInv && invContent && invArrow) {
+        toggleInv.addEventListener('click', function() {
+            if(invContent.style.display === 'none' || invContent.style.display === '') {
+                invContent.style.display = 'block';
+                invArrow.style.transform = 'rotate(0deg)';
             } else {
-                content.style.display = 'none';
-                arrow.style.transform = 'rotate(-90deg)';
+                invContent.style.display = 'none';
+                invArrow.style.transform = 'rotate(-90deg)';
             }
         });
+        // Par défaut ouvert
+        invContent.style.display = 'block';
     }
+
+    // --- Accordéon Prestations ---
+    var togglePres = document.getElementById('toggle-prestations');
+    var presContent = document.getElementById('prestations-content');
+    var presArrow = document.getElementById('prestations-arrow');
+    if(togglePres && presContent && presArrow) {
+        togglePres.addEventListener('click', function() {
+            if(presContent.style.display === 'none' || presContent.style.display === '') {
+                presContent.style.display = 'block';
+                presArrow.style.transform = 'rotate(0deg)';
+            } else {
+                presContent.style.display = 'none';
+                presArrow.style.transform = 'rotate(-90deg)';
+            }
+        });
+        // Par défaut ouvert
+        presContent.style.display = 'block';
+    }
+
+    // Accordéons pour chaque catégorie de prestations
+    document.querySelectorAll('.cat-toggle').forEach(function(toggle) {
+        var catId = toggle.getAttribute('data-cat-id');
+        var content = document.querySelector('.cat-content[data-cat-id="' + catId + '"]');
+        var arrow = toggle.querySelector('.cat-arrow');
+        if(content && arrow) {
+            content.style.display = 'block';
+            arrow.style.transform = 'rotate(0deg)';
+            toggle.addEventListener('click', function(e) {
+                if(content.style.display === 'none') {
+                    content.style.display = 'block';
+                    arrow.style.transform = 'rotate(0deg)';
+                } else {
+                    content.style.display = 'none';
+                    arrow.style.transform = 'rotate(-90deg)';
+                }
+            });
+        }
+    });
+
+    // --- MODALES ---
+    function openModal(id) {
+        document.getElementById(id).classList.add('is-active');
+    }
+    function closeModalAll() {
+        document.querySelectorAll('.modal').forEach(m => m.classList.remove('is-active'));
+    }
+    document.querySelectorAll('.js-close-modal, .modal .delete, .modal-background').forEach(btn => {
+        btn.addEventListener('click', closeModalAll);
+    });
+
+    // --- ÉQUIPE ---
+    document.getElementById('btn-ajouter-employe').onclick = function() {
+        document.getElementById('form-edit-employe').reset();
+        document.getElementById('form-edit-employe').action = '/parametres/employe/ajouter';
+        document.getElementById('form-edit-employe').couleur.value = '#2196f3'; // couleur par défaut
+        openModal('modal-edit-employe');
+    };
+    document.querySelectorAll('.js-edit-employe').forEach(btn => {
+        btn.onclick = function() {
+            document.getElementById('form-edit-employe').action = '/modifier_employe/' + btn.dataset.id;
+            document.getElementById('form-edit-employe').nom.value = btn.dataset.nom;
+            document.getElementById('form-edit-employe').role.value = btn.dataset.role;
+            document.getElementById('form-edit-employe').couleur.value = btn.dataset.couleur || '#2196f3';
+            openModal('modal-edit-employe');
+        };
+    });
+
+    // --- INVENTAIRE ---
+    document.getElementById('btn-ajouter-fourniture').onclick = function() {
+        document.getElementById('form-edit-fourniture').reset();
+        document.getElementById('form-edit-fourniture').action = '/ajouter_fourniture';
+        openModal('modal-edit-fourniture');
+    };
+    document.querySelectorAll('.js-edit-fourniture').forEach(btn => {
+        btn.onclick = function() {
+            document.getElementById('form-edit-fourniture').action = '/modifier_fourniture/' + btn.dataset.id;
+            document.getElementById('form-edit-fourniture').nom.value = btn.dataset.nom;
+            document.getElementById('form-edit-fourniture').reference.value = btn.dataset.reference;
+            document.getElementById('form-edit-fourniture').quantite.value = btn.dataset.quantite;
+            openModal('modal-edit-fourniture');
+        };
+    });
+
+    // --- CATÉGORIES ---
+    document.getElementById('btn-ajouter-categorie').onclick = function() {
+        document.getElementById('form-edit-categorie').reset();
+        document.getElementById('form-edit-categorie').action = '/parametres/categorie/ajouter';
+        openModal('modal-edit-categorie');
+    };
+    document.querySelectorAll('.js-edit-categorie').forEach(btn => {
+        btn.onclick = function() {
+            document.getElementById('form-edit-categorie').action = '/parametres/categorie/modifier/' + btn.dataset.id;
+            document.getElementById('form-edit-categorie').nom.value = btn.dataset.nom;
+            openModal('modal-edit-categorie');
+        };
+    });
+
+    // --- SOUS-CATÉGORIES ---
+    document.querySelectorAll('.js-ajouter-sous-categorie').forEach(btn => {
+        btn.onclick = function() {
+            document.getElementById('form-edit-sous-categorie').reset();
+            document.getElementById('form-edit-sous-categorie').action = '/ajouter_sous_categorie?categorie_id=' + btn.dataset.categorieId;
+            openModal('modal-edit-sous-categorie');
+        };
+    });
+    document.querySelectorAll('.js-edit-sous-categorie').forEach(btn => {
+        btn.onclick = function() {
+            document.getElementById('form-edit-sous-categorie').action = '/parametres/sous_categorie/modifier/' + btn.dataset.id;
+            document.getElementById('form-edit-sous-categorie').nom.value = btn.dataset.nom;
+            openModal('modal-edit-sous-categorie');
+        };
+    });
+
+    // --- PRESTATIONS ---
+    document.querySelectorAll('.js-ajouter-prestation').forEach(btn => {
+        btn.onclick = function() {
+            document.getElementById('form-edit-prestation').reset();
+            document.getElementById('form-edit-prestation').action = '/ajouter_detail_retouche?sous_categorie_id=' + btn.dataset.sousCategorieId;
+            openModal('modal-edit-prestation');
+        };
+    });
+    document.querySelectorAll('.edit-price-btn').forEach(btn => {
+        btn.onclick = function() {
+            document.getElementById('form-edit-prestation').action = '/parametres/prestation/modifier/' + btn.dataset.id;
+            document.getElementById('form-edit-prestation').nom.value = btn.closest('tr').querySelector('td').innerText;
+            document.getElementById('form-edit-prestation').prix.value = btn.closest('tr').querySelector('.price-text').innerText.replace(',', '.');
+            openModal('modal-edit-prestation');
+        };
+    });
+
+    // Fermer modale avec Echap
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeModalAll();
+    });
 });
 </script>
 {% endblock %}

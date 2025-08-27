@@ -12,23 +12,16 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
     
     <!-- Notre fichier de style personnalisé (doit être après Bulma) -->
-</head>
-        <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
-                <style>
-    body {
-        background-color: #f6f6ff; /* Couleur de fond si l'image tarde à charger */
-        background-image: url("{{ url_for('static', filename='images/fond-theme-sombre.png') }}");
-        background-repeat: no-repeat; /* On affiche l'image une seule fois */
-        background-size: cover; /* L'image couvre toute la page, effet "zoom" adaptatif */
-        background-position: center center; /* Centrage de l'image */
-        background-attachment: fixed; /* Le fond reste fixe quand on défile */
-    }
-
-    /* On garde un fond blanc pour les boîtes de contenu pour la lisibilité */
-    .box {
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+    <style>
+        body {
+            background-color: #f6f6ff;
+        }
+        /* On garde un fond blanc pour les boîtes de contenu pour la lisibilité */
+        .box {
             background-color: white;
-    }
-                </style>
+        }
+    </style>
 </head>
 <body>
     
@@ -52,8 +45,8 @@
     {% endwith %}
     <!-- C'est ici que le contenu de vos autres pages (planning, etc.) sera injecté -->
     {% block content %}{% endblock %}
-
-    <!-- Script pour le menu burger sur mobile -->
+    
+    {% block scripts %}
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const $navbarBurgers = Array.prototype.slice.call(document.querySelectorAll('.navbar-burger'), 0);
@@ -77,6 +70,6 @@
             });
         });
     </script>
-        {% block scripts %}{% endblock %}
+{% endblock %}
 </body>
 </html>

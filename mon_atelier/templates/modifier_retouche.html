@@ -1,3 +1,4 @@
+
 {% extends 'base.html' %}
 
 {% block content %}
@@ -5,8 +6,10 @@
     <div style="max-width: 900px; margin: 0 auto; box-shadow: 0 4px 32px #e0e0e0; border-radius: 24px; overflow: hidden; background: #fff;">
         <div style="padding: 2.5rem 2rem 2rem 2rem;">
             <h1 class="title" style="font-size:2.2rem; font-weight:800; color:#222; margin-bottom:0.2em;">Modifier la retouche #{{ retouche.id }}</h1>
-            <form method="post">
+            <h2 class="subtitle" style="font-size:1.2rem; color:#888; margin-bottom:2em;">Modifiez les informations de la commande</h2>
+            <form method="POST" action="{{ url_for('modifier_retouche', id=retouche.id) }}">
                 <div class="box" style="box-shadow:none; border-radius:16px;">
+                    <h2 class="subtitle is-4" style="font-size:1.1rem; color:#444;">Informations Générales</h2>
                     <div class="columns">
                         <div class="column">
                             <div class="field">
@@ -28,39 +31,17 @@
                             <div class="field">
                                 <label class="label">Date d'échéance</label>
                                 <div class="control">
-                                    <input class="input" type="date" name="date_echeance" value="{{ retouche.date_echeance.strftime('%Y-%m-%d') if retouche.date_echeance }}">
+                                    <input class="input" type="date" name="date_echeance" value="{{ retouche.date_echeance.strftime('%Y-%m-%d') if retouche.date_echeance else '' }}">
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <hr>
                     <div class="columns">
-                        <div class="column">
-                            <div class="field">
-                                <label class="label">Détail de la retouche</label>
-                                <div class="control">
-                                    <div class="select is-fullwidth">
-                                        <select name="detail_retouche_id">
-                                            <option value="">-- Autre / Manuel --</option>
-                                            {% for cat in categories %}
-                                            <optgroup label="{{ cat.nom }}">
-                                                {% for sc in cat.sous_categories %}
-                                                    {% for detail in sc.details_retouches %}
-                                                    <option value="{{ detail.id }}" {% if retouche.detail_retouche_id == detail.id %}selected{% endif %}>{{ detail.nom }}</option>
-                                                    {% endfor %}
-                                                {% endfor %}
-                                            </optgroup>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                         <div class="column">
                             <div class="field">
                                 <label class="label">Prix (€)</label>
                                 <div class="control">
-                                    <input class="input" type="number" step="0.01" name="prix" value="{{ retouche.prix if retouche.prix is not none }}">
+                                    <input class="input" type="number" step="0.01" name="prix" value="{{ retouche.prix or '' }}">
                                 </div>
                             </div>
                         </div>
@@ -70,6 +51,7 @@
                                 <div class="control">
                                     <div class="select is-fullwidth">
                                         <select name="statut">
+                                            <option value="En attente" {% if retouche.statut == 'En attente' %}selected{% endif %}>En attente</option>
                                             <option value="En cours" {% if retouche.statut == 'En cours' %}selected{% endif %}>En cours</option>
                                             <option value="Terminée" {% if retouche.statut == 'Terminée' %}selected{% endif %}>Terminée</option>
                                             <option value="Rendue" {% if retouche.statut == 'Rendue' %}selected{% endif %}>Rendue</option>
@@ -86,32 +68,26 @@
                         </div>
                     </div>
                     <div class="field">
-                        <label class="label">Essayage</label>
+                        <label class="label">Essayage en boutique</label>
                         <div class="control">
                             <label class="radio">
                                 <input type="radio" name="essayage_boutique" value="on" {% if retouche.essayage_boutique %}checked{% endif %}>
                                 Effectué en boutique
                             </label>
-                            <br>
-                            <label class="radio">
+                            <label class="radio" style="margin-left:1em;">
                                 <input type="radio" name="essayage_boutique" value="off" {% if not retouche.essayage_boutique %}checked{% endif %}>
                                 Non effectué en boutique
                             </label>
                         </div>
                     </div>
-                    <hr>
-                    <div class="field" style="text-align:center; display:flex; justify-content:center; gap:1rem;">
-                        <div class="control">
-                            <button type="submit" class="button is-primary is-large">Enregistrer les modifications</button>
-                        </div>
-                        <div class="control">
-                            <a href="{{ url_for('planning_retouches_mensuel') }}" class="button is-light is-large">Retour planning</a>
-                        </div>
-                        <form method="post" action="{{ url_for('supprimer_retouche', id=retouche.id) }}" style="display:inline;">
-                            <button type="submit" class="button is-danger is-large" onclick="return confirm('Êtes-vous sûr de vouloir supprimer définitivement cette retouche ?');">Supprimer</button>
-                        </form>
-                    </div>
                 </div>
+                <div class="has-text-right mt-4">
+                    <button class="button is-primary is-medium" type="submit">Enregistrer les modifications</button>
+                    <a href="{{ url_for('detail_retouche', id=retouche.id) }}" class="button is-light is-medium">Annuler</a>
+                </div>
+            </form>
+            <form method="POST" action="{{ url_for('supprimer_retouche', id=retouche.id) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer définitivement cette retouche ?');" style="margin-top:2rem;">
+                <button type="submit" class="button is-danger is-light">Supprimer cette retouche</button>
             </form>
         </div>
     </div>

@@ -23,16 +23,17 @@
         </div>
             <a href="{{ url_for('index') }}" class="button is-light" style="margin-top:1.5rem;">Retour</a>
 
-            <!-- Modal d'ajout présence/congé -->
+            <!-- Modal d'ajout/modification présence/congé -->
             <div class="modal" id="addEventModal">
                 <div class="modal-background"></div>
                 <div class="modal-card">
                     <header class="modal-card-head">
-                        <p class="modal-card-title">Ajouter une présence ou un congé</p>
+                        <p class="modal-card-title" id="event-modal-title">Ajouter une présence ou un congé</p>
                         <button class="delete" aria-label="close" id="close-modal"></button>
                     </header>
                     <section class="modal-card-body">
                         <form id="addEventForm">
+                            <input type="hidden" name="event_id" id="event-id">
                             <div class="field is-grouped">
                                 <div class="control" style="width:48%;">
                                     <label class="label">Du</label>
@@ -73,7 +74,10 @@
                                     </div>
                                 </div>
                             </div>
-                            <button type="submit" class="button is-success">Ajouter</button>
+                            <div id="event-actions" style="display:none; margin-bottom:1rem;">
+                                <button type="button" class="button is-danger" id="btn-delete-event" style="margin-right:1rem;">Supprimer</button>
+                            </div>
+                            <button type="submit" class="button is-success" id="event-submit-btn">Ajouter</button>
                         </form>
                     </section>
                 </div>
@@ -120,6 +124,21 @@
                         right: ''
                     },
                     events: allEvents,
+                    eventClick: function(info) {
+                        var event = info.event;
+                        // Remplir le formulaire avec les infos de l'événement
+                        document.getElementById('event-modal-title').textContent = 'Modifier la présence/congé';
+                        document.getElementById('event-id').value = event.id || '';
+                        document.getElementById('event-date-debut').value = event.startStr;
+                        document.getElementById('event-date-fin').value = event.endStr ? event.endStr.split('T')[0] : event.startStr;
+                        document.getElementById('event-type').value = event.extendedProps.type || 'presence';
+                        document.getElementById('event-motif').value = event.extendedProps.motif || '';
+                        document.getElementById('event-employe-id').value = event.extendedProps.employe_id || '';
+                        document.getElementById('motif-field').style.display = (event.extendedProps.type === 'conge') ? '' : 'none';
+                        document.getElementById('event-actions').style.display = '';
+                        document.getElementById('event-submit-btn').textContent = 'Enregistrer';
+                        document.getElementById('addEventModal').classList.add('is-active');
+                    }
                 });
                 calendar.render();
 
@@ -149,6 +168,12 @@
                 // Ouvre le modal à l'appui sur le bouton +
                 document.getElementById('btn-add-event').addEventListener('click', function(e) {
                     e.preventDefault();
+                    document.getElementById('event-modal-title').textContent = 'Ajouter une présence ou un congé';
+                    document.getElementById('addEventForm').reset();
+                    document.getElementById('event-id').value = '';
+                    document.getElementById('motif-field').style.display = 'none';
+                    document.getElementById('event-actions').style.display = 'none';
+                    document.getElementById('event-submit-btn').textContent = 'Ajouter';
                     document.getElementById('addEventModal').classList.add('is-active');
                 });
                 document.getElementById('close-modal').addEventListener('click', function() {
@@ -163,11 +188,13 @@
                     document.getElementById('motif-field').style.display = this.value === 'conge' ? '' : 'none';
                 });
 
-                // Soumission du formulaire d'ajout (AJAX)
+                // Soumission du formulaire d'ajout/modification (AJAX)
                 document.getElementById('addEventForm').addEventListener('submit', function(e) {
                     e.preventDefault();
                     var formData = new FormData(this);
-                    fetch("{{ url_for('ajouter_presence_conge') }}", {
+                    var eventId = document.getElementById('event-id').value;
+                    var url = eventId ? "{{ url_for('modifier_presence_conge') }}" : "{{ url_for('ajouter_presence_conge') }}";
+                    fetch(url, {
                         method: 'POST',
                         body: formData
                     })
@@ -179,9 +206,32 @@
                             this.reset();
                             document.getElementById('motif-field').style.display = 'none';
                         } else {
-                            alert('Erreur : ' + (data.error || 'Impossible d\'ajouter l\'événement.'));
+                            alert('Erreur : ' + (data.error || 'Impossible d\'ajouter/modifier l\'événement.'));
                         }
                     });
+                });
+
+                // Suppression d'un événement
+                document.getElementById('btn-delete-event').addEventListener('click', function() {
+                    var eventId = document.getElementById('event-id').value;
+                    if(eventId && confirm('Supprimer cette présence/congé ?')) {
+                        fetch("{{ url_for('supprimer_presence_conge') }}", {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({event_id: eventId})
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if(data.success) {
+                                calendar.refetchEvents();
+                                document.getElementById('addEventModal').classList.remove('is-active');
+                                document.getElementById('addEventForm').reset();
+                                document.getElementById('motif-field').style.display = 'none';
+                            } else {
+                                alert('Erreur : ' + (data.error || 'Impossible de supprimer l\'événement.'));
+                            }
+                        });
+                    }
                 });
             });
         </script>

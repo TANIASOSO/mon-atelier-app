@@ -31,7 +31,7 @@ app.config['PAULA_COUTURE_SIRET'] = "789 369 584"
 app.config['TVA_RATE'] = 0.20 
 
 # On lit les secrets depuis les variables d'environnement
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or 'remplacez-moi-par-une-cle-secrete-unique-et-longue'
 app.config['TWILIO_ACCOUNT_SID'] = os.environ.get('TWILIO_ACCOUNT_SID')
 app.config['TWILIO_AUTH_TOKEN'] = os.environ.get('TWILIO_AUTH_TOKEN')
 app.config['TWILIO_PHONE_NUMBER'] = os.environ.get('TWILIO_PHONE_NUMBER')
