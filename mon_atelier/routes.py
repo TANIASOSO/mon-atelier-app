@@ -232,66 +232,7 @@ def ajouter_retouche():
 
         for i in range(len(detail_ids)):
             detail_id = detail_ids[i]
-            detail = DetailRetouche.query.get(detail_id) if detail_id else None
-            prix_val = prixs[i] if i < len(prixs) else None
-            prix_retouche = None
-            try:
-                if prix_val:
-                    prix_retouche = float(prix_val)
-            except (ValueError, TypeError):
-                pass
-            if prix_retouche is None:
-                prix_retouche = detail.prix if detail else 0.0
-
-            description = descriptions[i] if i < len(descriptions) else ""
-            quantite = int(quantites[i]) if i < len(quantites) and quantites[i] else 1
-
-            for _ in range(quantite):
-                if detail:
-                    for fourniture in detail.fournitures:
-                        fourniture.quantite -= 1
-                nouvelle_retouche = Retouche(
-                    client_id=client.id,
-                    ticket_id=nouveau_ticket.id,
-                    prix=prix_retouche,
-                    description=description,
-                    detail_retouche_id=detail.id if detail else None,
-                    essayage_boutique=essayage_boutique
-                )
-                db.session.add(nouvelle_retouche)
-                retouches_creees.append(nouvelle_retouche)
-                if prix_retouche:
-                    total_ht += prix_retouche
-        db.session.commit()
-
-        # Calcul de la TVA et du total
-        tva_rate = app.config['TVA_RATE']
-        montant_tva = total_ht * tva_rate
-        total_ttc = total_ht + montant_tva
-
-    now = datetime.now()
-    date_formatee = format_date(now, format='full', locale='fr_FR')
-    return render_template('ticket.html',
-                   client=client,
-                   ticket=nouveau_ticket,
-                   retouches=retouches_creees,
-                   total_ht=total_ht,
-                   montant_tva=montant_tva,
-                   total_ttc=total_ttc,
-                   tva_rate=tva_rate,
-                   numero_ticket=nouveau_ticket.id,
-                   now=now,
-                   date_formatee=date_formatee)
-    
-    # Le code pour la méthode GET ne change pas
-    clients = Client.query.all()
-    categories = Categorie.query.all()
-    date_selectionnee = request.args.get('date') 
-    return render_template('ajouter_retouche.html', 
-                           categories=categories, 
-                           clients=clients,
-                           date_selectionnee=date_selectionnee)
-
+            detail = DetailRetouche.query.
 
 # --- ROUTES MANQUANTES RÉINTÉGRÉES ET MISES À JOUR ---
 
