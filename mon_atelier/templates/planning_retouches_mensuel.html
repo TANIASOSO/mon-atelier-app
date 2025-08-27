@@ -27,27 +27,112 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // --- CALENDRIER PRINCIPAL ---
+        // On cible bien le div avec l'id 'retouches-calendar'
         var calendarEl = document.getElementById('retouches-calendar');
+
+
         var calendar = new FullCalendar.Calendar(calendarEl, {
-            // ... toutes vos options de calendrier ...
+            initialView: 'dayGridMonth',
+            locale: 'fr',
+            height: 'auto',
+            firstDay: 1,
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,dayGridWeek,listWeek,dayGridDay'
+            },
+            buttonText: {
+                dayGridMonth: 'Mois',
+                dayGridWeek: 'Semaine (colonnes)',
+                listWeek: 'Semaine (liste)',
+                dayGridDay: "Aujourd'hui"
+            },
+            views: {
+                listWeek: {
+                    duration: { days: 6 },
+                    firstDay: 1
+                }
+            },
+            // On charge les événements depuis notre API
+            events: '/api/retouche_events',
+
+            // Affichage personnalisé du contenu de l'événement (client + résumé)
+            eventContent: function(arg) {
+                let clientName = document.createElement('b');
+                clientName.innerHTML = arg.event.title;
+                let summaryDiv = document.createElement('div');
+                let summaryLines = arg.event.extendedProps.summary || [];
+                summaryLines.forEach(function(line) {
+                    let p = document.createElement('p');
+                    p.innerHTML = line;
+                    p.style.fontSize = '12px';
+                    summaryDiv.appendChild(p);
+                });
+                return { domNodes: [clientName, summaryDiv] };
+            },
+
+            // Affiche un message personnalisé quand il n'y a aucun événement
+            noEventsContent: 'Aucune retouche prévue',
+
+            // On rend les événements cliquables
             eventClick: function(info) {
-                // ... votre logique de clic ...
+                info.jsEvent.preventDefault(); // Empêche le lien de base de fonctionner
+
+                const ticketId = info.event.extendedProps.ticket_id;
+                if (!ticketId) {
+                    alert("Erreur : ID du ticket introuvable.");
+                    return;
+                }
+
+                // Met à jour les liens dans la modale
+                document.getElementById('modal-ticket-title').innerText = `Actions pour le ticket de ${info.event.title}`;
+                document.getElementById('modal-detail-link').href = `/ticket/${ticketId}`;
+                document.getElementById('modal-edit-link').href = `/ticket/${ticketId}/modifier`;
+                document.getElementById('modal-reprint-link').href = `/ticket/${ticketId}/reimprimer`;
+                document.getElementById('modal-delete-form').action = `/ticket/${ticketId}/supprimer`;
+
+                // Ouvre la modale
                 document.getElementById('modal-ticket-actions').classList.add('is-active');
             }
         });
-        calendar.render();
 
-        // --- GESTION DE LA MODALE (fusionné ici) ---
-        const modal = document.getElementById('modal-ticket-actions');
-        if (modal) {
-            const closeButtons = modal.querySelectorAll('.delete, .modal-background');
-            closeButtons.forEach(el => {
-                el.addEventListener('click', () => {
-                    modal.classList.remove('is-active');
-                });
-            });
-        }
+        // On dessine le calendrier
+        calendar.render();
     });
+</script>
+<div id="modal-ticket-actions" class="modal">
+  <div class="modal-background"></div>
+  <div class="modal-card">
+    <header class="modal-card-head">
+      <p id="modal-ticket-title" class="modal-card-title">Actions pour le ticket</p>
+      <button class="delete" aria-label="close"></button>
+    </header>
+    <section class="modal-card-body">
+      <p>Que souhaitez-vous faire avec ce ticket ?</p>
+    </section>
+    <footer class="modal-card-foot">
+        <a id="modal-detail-link" href="#" class="button is-info">Voir le Détail</a>
+        <a id="modal-edit-link" href="#" class="button is-success">Modifier</a>
+        <a id="modal-reprint-link" href="#" target="_blank" class="button is-warning">Réimprimer</a>
+        <form id="modal-delete-form" method="POST" style="margin-left: auto;">
+            <button class="button is-danger" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce ticket et toutes ses retouches ?');">Supprimer</button>
+        </form>
+    </footer>
+  </div>
+</div>
+
+<script>
+// Script pour fermer la modale
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('modal-ticket-actions');
+    if (modal) {
+        const closeButtons = modal.querySelectorAll('.delete, .modal-background');
+        closeButtons.forEach(el => {
+            el.addEventListener('click', () => {
+                modal.classList.remove('is-active');
+            });
+        });
+    }
+});
 </script>
 {% endblock %}
