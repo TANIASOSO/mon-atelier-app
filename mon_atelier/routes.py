@@ -269,28 +269,28 @@ def ajouter_retouche():
         montant_tva = total_ht * tva_rate
         total_ttc = total_ht + montant_tva
 
-    now = datetime.now()
-    date_formatee = format_date(now, format='full', locale='fr_FR')
-    return render_template('ticket.html',
-                   client=client,
-                   ticket=nouveau_ticket,
-                   retouches=retouches_creees,
-                   total_ht=total_ht,
-                   montant_tva=montant_tva,
-                   total_ttc=total_ttc,
-                   tva_rate=tva_rate,
-                   numero_ticket=nouveau_ticket.id,
-                   now=now,
-                   date_formatee=date_formatee)
-    
-    # Le code pour la méthode GET ne change pas
-    clients = Client.query.all()
-    categories = Categorie.query.all()
-    date_selectionnee = request.args.get('date') 
-    return render_template('ajouter_retouche.html', 
-                           categories=categories, 
-                           clients=clients,
-                           date_selectionnee=date_selectionnee)
+        now = datetime.now()
+        date_formatee = format_date(now, format='full', locale='fr_FR')
+        return render_template('ticket.html',
+                       client=client,
+                       ticket=nouveau_ticket,
+                       retouches=retouches_creees,
+                       total_ht=total_ht,
+                       montant_tva=montant_tva,
+                       total_ttc=total_ttc,
+                       tva_rate=tva_rate,
+                       numero_ticket=nouveau_ticket.id,
+                       now=now,
+                       date_formatee=date_formatee)
+    else:
+        # Le code pour la méthode GET
+        clients = Client.query.all()
+        categories = Categorie.query.all()
+        date_selectionnee = request.args.get('date') 
+        return render_template('ajouter_retouche.html', 
+                               categories=categories, 
+                               clients=clients,
+                               date_selectionnee=date_selectionnee)
 
 
 # --- ROUTES MANQUANTES RÉINTÉGRÉES ET MISES À JOUR ---
