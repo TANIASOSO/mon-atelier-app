@@ -125,7 +125,6 @@ class Ticket(db.Model):
 
 # --- PAGES WEB (LES ROUTES) ---
 
-    from datetime import timedelta
 @app.route("/")
 def index():
     semaine = int(request.args.get('semaine', 0))
