@@ -1039,35 +1039,6 @@ def api_retouche_events():
             })
     return jsonify(events)
 
-
-# Nouvelle route pour réimprimer le ticket (par ticket_id)
-@app.route('/ticket/<int:ticket_id>/reimprimer')
-def reimprimer_ticket(ticket_id):
-    import locale
-    locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
-    ticket = Ticket.query.get_or_404(ticket_id)
-    client = ticket.client
-    retouches = ticket.retouches
-    total_ht = sum(r.prix or 0.0 for r in retouches)
-    tva_rate = app.config.get('TVA_RATE', 0.2)
-    montant_tva = total_ht * tva_rate
-    total_ttc = total_ht + montant_tva
-    now = datetime.now()
-    date_formatee = format_date(now, format='full', locale='fr_FR')
-    return render_template(
-        'ticket.html',
-        client=client,
-        ticket=ticket,
-        retouches=retouches,
-        total_ht=total_ht,
-        montant_tva=montant_tva,
-        total_ttc=total_ttc,
-        tva_rate=tva_rate,
-        numero_ticket=ticket.id,
-        now=now,
-        date_formatee=date_formatee
-    )
-
 @app.route('/api/shifts_events')
 def api_shifts_events():
     shifts = PlanningShift.query.all()
