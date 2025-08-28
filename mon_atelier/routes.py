@@ -1003,7 +1003,7 @@ def planning_employe():
             'type': 'conge',
             'employe': conge.employe.nom
         })
-        return render_template('planning_employe.html', events=events)
+    return render_template('planning_employe.html', events=events)
 
 @app.route('/planning/retouches')
 def planning_retouches_mensuel():
@@ -1013,30 +1013,44 @@ def planning_retouches_mensuel():
 @app.route('/api/retouche_events')
 def api_retouche_events():
     # On récupère tous les tickets et leurs retouches associées
-    tous_les_tickets = Ticket.query.options(db.joinedload(Ticket.retouches).joinedload(Retouche.detail)).all()
-    events = []
+    tous_les_tickets = Ticket.query.options(db.joinedload(Ticket.retouches).joinedload(Retouche.detail).joinedload(DetailRetouche.sous_categorie).joinedload(SousCategorie.categorie)).all()
+    # Regrouper par (date, client)
+    events_dict = {}  # (date, client_id) -> { 'client': nom, 'categories': set(), 'ticket_id': id, 'is_all_terminated': bool }
     for ticket in tous_les_tickets:
-        # On s'assure que le ticket a au moins une retouche et une date d'échéance
         if not ticket.retouches or not ticket.date_echeance:
             continue
-
-        # On prend la date d'échéance du ticket
+        client = ticket.client
         date = ticket.date_echeance
-        # On crée un résumé des prestations
-        summary_list = [r.detail.nom for r in ticket.retouches if r.detail]
-        # On vérifie si toutes les retouches du ticket sont terminées
-        is_all_terminated = all(r.statut == 'Terminée' for r in ticket.retouches)
-        for retouche in ticket.retouches:
-            events.append({
-                'title': f"{retouche.client.nom} - {retouche.detail.nom if retouche.detail else 'Prestation non spécifiée'}",
-                'start': date.strftime('%Y-%m-%d'),
-                'url': url_for('detail_ticket', ticket_id=ticket.id),
-                'className': 'tache-terminee' if is_all_terminated else '',
-                'extendedProps': {
-                    'summary': summary_list,
-                    'ticket_id': ticket.id  # <-- Ajout de l'ID du ticket ici
-                }
-            })
+        key = (date, client.id)
+        if key not in events_dict:
+            events_dict[key] = {
+                'client': client.nom,
+                'categories_count': {},  # nom_categorie -> quantité
+                'ticket_id': ticket.id,
+                'is_all_terminated': True
+            }
+        # Compter les quantités par catégorie
+        for r in ticket.retouches:
+            if r.detail and r.detail.sous_categorie and r.detail.sous_categorie.categorie:
+                cat_nom = r.detail.sous_categorie.categorie.nom
+                events_dict[key]['categories_count'][cat_nom] = events_dict[key]['categories_count'].get(cat_nom, 0) + 1
+            events_dict[key]['is_all_terminated'] = events_dict[key]['is_all_terminated'] and (r.statut == 'Terminée')
+
+    # Générer la liste d'événements pour FullCalendar
+    events = []
+    for (date, _), data in events_dict.items():
+        # Format : 1 Pantalon, 2 Jupes, etc. sur des lignes séparées
+        summary_lines = [f"{q} {cat}" for cat, q in data['categories_count'].items()]
+        events.append({
+            'title': f"{data['client']}",
+            'start': date.strftime('%Y-%m-%d'),
+            'url': url_for('detail_ticket', ticket_id=data['ticket_id']),
+            'className': 'tache-terminee' if data['is_all_terminated'] else '',
+            'extendedProps': {
+                'summary': summary_lines,
+                'ticket_id': data['ticket_id']
+            }
+        })
     return jsonify(events)
 
 @app.route('/api/shifts_events')
@@ -1180,53 +1194,55 @@ def detail_ticket(ticket_id):
         now=now,
         now_fr=now_fr
     )
+# --- ROUTES POUR LA GESTION DES TICKETS ---
 
-# --- MODIFICATION GROUPEE DES RETOUCHES D'UN TICKET ---
 @app.route('/ticket/<int:ticket_id>/modifier', methods=['GET', 'POST'])
 def modifier_ticket(ticket_id):
     ticket = Ticket.query.get_or_404(ticket_id)
+    categories = Categorie.query.all()
     if request.method == 'POST':
+        # Boucle sur chaque retouche du ticket pour la mettre à jour
         for retouche in ticket.retouches:
-            prix = request.form.get(f'prix_{retouche.id}')
-            statut = request.form.get(f'statut_{retouche.id}')
-            description = request.form.get(f'description_{retouche.id}')
-            if prix is not None:
-                try:
-                    retouche.prix = float(prix)
-                except (ValueError, TypeError):
-                    pass
-            if statut is not None:
-                retouche.statut = statut
-            if description is not None:
-                retouche.description = description
+            nouveau_prix = request.form.get(f'prix_{retouche.id}')
+            nouveau_statut = request.form.get(f'statut_{retouche.id}')
+            nouvelle_description = request.form.get(f'description_{retouche.id}')
+            nouveau_detail_id = request.form.get(f'detail_retouche_id_{retouche.id}')
+            if nouveau_detail_id:
+                retouche.detail_retouche_id = int(nouveau_detail_id)
+            if nouveau_prix is not None:
+                retouche.prix = float(nouveau_prix)
+            if nouveau_statut:
+                retouche.statut = nouveau_statut
+            if nouvelle_description is not None:
+                retouche.description = nouvelle_description
         db.session.commit()
+        flash('Ticket mis à jour avec succès.', 'success')
         return redirect(url_for('detail_ticket', ticket_id=ticket.id))
-    return render_template('modifier_ticket.html', ticket=ticket)
+    return render_template('modifier_ticket.html', ticket=ticket, categories=categories)
 
-# --- ROUTE POUR RÉIMPRIMER UN TICKET ---
 @app.route('/ticket/<int:ticket_id>/reimprimer')
 def reimprimer_ticket(ticket_id):
-    import locale
-    locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
     ticket = Ticket.query.get_or_404(ticket_id)
-    client = ticket.client
     retouches = ticket.retouches
+    client = ticket.client
     total_ht = sum(r.prix or 0.0 for r in retouches)
     tva_rate = app.config.get('TVA_RATE', 0.2)
     montant_tva = total_ht * tva_rate
     total_ttc = total_ht + montant_tva
-    now = datetime.now()
-    date_formatee = format_date(now, format='full', locale='fr_FR')
-    return render_template(
-        'ticket.html',
-        client=client,
-        ticket=ticket,
-        retouches=retouches,
-        total_ht=total_ht,
-        montant_tva=montant_tva,
-        total_ttc=total_ttc,
-        tva_rate=tva_rate,
-        numero_ticket=ticket.id,
-        now=now,
-        date_formatee=date_formatee
-    )
+    return render_template('ticket.html', 
+                           client=client,
+                           retouches=retouches,
+                           total_ht=total_ht,
+                           montant_tva=montant_tva,
+                           total_ttc=total_ttc,
+                           tva_rate=tva_rate,
+                           numero_ticket=ticket.id,
+                           now=datetime.now())
+
+@app.route('/ticket/<int:ticket_id>/supprimer', methods=['POST'])
+def supprimer_ticket(ticket_id):
+    ticket = Ticket.query.get_or_404(ticket_id)
+    db.session.delete(ticket)
+    db.session.commit()
+    flash('Le ticket et toutes ses retouches ont été supprimés.', 'success')
+    return redirect(url_for('planning_retouches_mensuel'))

@@ -52,9 +52,9 @@
           }
         });
       }
-      // FullCalendar
-      var calendarEl = document.getElementById('planning-employe-calendar');
-      var calendar = new FullCalendar.Calendar(calendarEl, {
+  // FullCalendar
+  var calendarEl = document.getElementById('planning-employe-calendar');
+  var calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
         locale: 'fr',
         height: 800,
@@ -68,7 +68,9 @@
           timeGridWeek: 'Semaine',
           timeGridDay: 'Jour'
         },
-        events: {{ events|tojson|safe }},
+
+  events: {{ events|default([])|tojson|safe }},
+
         editable: true,
         selectable: true,
         select: function(info) {
