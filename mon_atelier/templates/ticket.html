@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Ticket #{{ numero_ticket }}</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif;
+            width: 320px;
+            margin: 0 auto;
+            color: #000;
+            font-size: 15px;
+            line-height: 1.35;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+        }
+        .header h1 { 
+            font-size: 24px; 
+            font-weight: bold; 
+            margin: 0 0 5px 0;
+            text-transform: uppercase;
+        }
+        .header .subtitle {
+            font-size: 13px;
+            font-style: italic;
+            margin-bottom: 8px;
+        }
+        .header p { 
+            margin: 1px 0; 
+            font-size: 13px; 
+        }
+        
+        .ticket-conserve {
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+            margin: 10px 0;
+            padding: 7px;
+            border: 1px solid #000;
+        }
+        
+        .date-info {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 5px;
+            border: 1px solid #000;
+        }
+        .date-info div {
+            text-align: center;
+            flex: 1;
+        }
+        .date-info .label {
+            font-size: 13px;
+            margin-bottom: 2px;
+        }
+        .date-info .value {
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .ticket-number {
+            text-align: center;
+            margin: 15px 0;
+            padding: 10px;
+            background: #ff6b6b;
+            color: white;
+            font-weight: bold;
+            font-size: 22px;
+        }
+        
+        .etiquetage-section {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .etiquetage-title {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        .etiquetage-date {
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .code-section {
+            margin: 15px 0;
+            border: 1px solid #000;
+            padding: 5px;
+        }
+        .code-label {
+            font-size: 13px;
+            margin-bottom: 3px;
+        }
+        
+        .prestation-item {
+            margin: 5px 0;
+            padding: 3px 0;
+            border-bottom: 1px dotted #ccc;
+            font-size: 15px;
+        }
+        
+        .essayage-note {
+            text-align: center;
+            font-size: 13px;
+            margin: 10px 0;
+            font-style: italic;
+        }
+        
+        .paiement-status {
+            text-align: center;
+            margin: 15px 0;
+            padding: 8px;
+            border: 2px solid;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .paye { 
+            color: green; 
+            border-color: green; 
+            background: #f0fff0;
+        }
+        .non-paye { 
+            color: #e57373; 
+            border-color: #e57373; 
+            background: #fff5f5;
+        }
+        
+        .signature-section {
+            margin: 15px 0;
+            text-align: center;
+        }
+        .signature-label {
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+        
+        .footer-legal {
+            font-size: 11px;
+            text-align: center;
+            margin-top: 15px;
+            padding: 8px 5px;
+            border-top: 1px solid #000;
+            line-height: 1.3;
+        }
+        
+        .no-print { 
+            margin-top: 20px; 
+            text-align: center; 
+        }
+        
+        @media print {
+            @page { margin: 3mm; }
+            body { margin: 0; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Paula Couture</h1>
+        <div class="subtitle">La couture de qualité</div>
+        <p>40 rue Basse du Château, 73000 Chambéry</p>
+        <p>04 79 68 85 84</p>
+        <p>paula.couture@ymail.com</p>
+        <p>SIRET : 789 369 584</p>
+    </div>
+
+    <div class="ticket-conserve">
+        TICKET À CONSERVER
+    </div>
+    
+    <div class="date-info">
+        <div>
+            <div class="label">À PRÉPARER POUR LE</div>
+            <div class="value">{{ ticket.date_echeance.strftime('%d/%m/%Y') if ticket.date_echeance else 'N/A' }}</div>
+        </div>
+        <div>
+            <div class="label">À PARTIR DE</div>
+            <div class="value">17h</div>
+            <div style="font-size: 8px; margin-top: 2px;">une fois le SMS reçu</div>
+        </div>
+    </div>
+    
+    <div style="text-align:center; font-weight:bold; font-size:20px; margin: 16px 0 0 0;">
+        {{ client.nom.upper() }}<br>
+        <span style="font-weight:normal; font-size:16px;">{{ client.numero_telephone or '' }}</span>
+    </div>
+    
+    <div class="ticket-number">
+        T-{{ numero_ticket }}
+    </div>
+    
+    <div class="etiquetage-section">
+        <div class="etiquetage-title">TICKET DE DÉPÔT</div>
+        <div class="etiquetage-date">{{ ticket.date_creation.strftime('%d/%m/%Y') }}</div>
+    </div>
+    
+    <div class="code-section">
+        <div class="code-label">Code {{ numero_ticket }}-20</div>
+        {% for retouche in retouches %}
+        <div class="prestation-item">
+            - 1 {{ retouche.detail.sous_categorie.categorie.nom if retouche.detail }}
+            {{ retouche.detail.nom if retouche.detail }} - {{ "%.2f"|format(retouche.prix) }}€<br>
+            <span style="font-size:13px;">{{ retouche.description }}</span>
+        </div>
+        {% endfor %}
+        
+        <div style="border-top: 2px solid #000; margin-top: 10px; padding-top: 5px; text-align: right; font-weight: bold; font-size: 16px;">
+            TOTAL: {{ "%.2f"|format(retouches|sum(attribute='prix')) }}€
+        </div>
+    </div>
+    
+    <div class="essayage-note">
+        {% if retouches and retouches[0].essayage_boutique %}
+        Essayage effectué en boutique
+        {% else %}
+        Essayage non effectué en boutique
+        {% endif %}
+    </div>
+
+    <div class="paiement-status {% if ticket.paye %}paye{% else %}non-paye{% endif %}">
+        {% if ticket.paye %}Payé{% else %}Non Payé{% endif %}
+    </div>
+    
+    <div class="signature-section">
+        <div class="signature-label">Signature</div>
+    </div>
+    
+    <div class="footer-legal">
+        Tout article non récupéré dans un délai de 6 mois sera considéré comme abandonné. Conformément à la loi du 31 mars 1904, l'entreprise se réserve le droit d'en disposer après un an, et de faire un don aux associations.
+    </div>
+
+    <div class="no-print">
+        <button onclick="printDuplicate();">Imprimer (2 copies)</button>
+        <button type="button" onclick="window.history.back();">Retour</button>
+        <a href="{{ url_for('planning_retouches_mensuel') }}">Retour au planning</a>
+    </div>
+
+    <script>
+        function printDuplicate() {
+            // Première impression
+            window.print();
+            
+            // Délai pour permettre à la première impression de se terminer, puis seconde impression
+            setTimeout(function() {
+                window.print();
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

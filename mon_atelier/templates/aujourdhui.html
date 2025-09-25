@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<section class="section" style="background: #f8f9fa; min-height: 100vh;">
+    <div style="display:flex; max-width: 1200px; margin: 0 auto;">
+        <!-- Sidebar -->
+        <aside style="width: 240px; min-width:200px; background: #f6f6ff; border-radius: 18px; box-shadow: 0 2px 8px #ececff; padding: 2rem 1rem 1.5rem 1rem; margin-right:2.5rem; display:flex; flex-direction:column; align-items:center;">
+            <!-- Menu navigation -->
+            <nav style="width:100%; margin-bottom:2rem;">
+                <ul style="list-style:none; padding:0; margin:0;">
+                    <li style="margin-bottom:1rem;"><a href="{{ url_for('planning') }}" class="button is-fullwidth is-light">Semaine</a></li>
+                    <li style="margin-bottom:1rem;"><a href="{{ url_for('calendrier_annuel', employe_id=1) }}" class="button is-fullwidth is-light">Mois</a></li>
+                    <li><a href="{{ url_for('vue_aujourdhui') }}" class="button is-fullwidth is-primary">Jour</a></li>
+                </ul>
+            </nav>
+            <!-- Mini calendrier -->
+            <div id="mini-calendar"></div>
+        </aside>
+        <!-- Contenu principal -->
+        <div style="flex:1;">
+            <div style="max-width: 900px; margin: 0 auto; background: #fff; border-radius: 24px; box-shadow: 0 4px 32px #e0e0e0; padding: 2.5rem 2rem 2rem 2rem;">
+                <h1 class="title is-3" style="color:#a18aff;">Retouches pour aujourd'hui</h1>
+                <h2 class="subtitle" style="text-align:center; margin-bottom:2rem;">Cliquez sur un client pour voir les retouches et effectuer des actions.</h2>
+                {% if retouches_par_client %}
+                    <div class="columns is-multiline">
+                        {% for nom_client, retouches_client in retouches_par_client.items() %}
+                        <div class="column is-half">
+                            <div class="box client-card is-clickable" style="background:#f6f6ff; border-radius:12px; box-shadow:0 2px 8px #ececff; padding:1.2rem 1.5rem; cursor:pointer;"
+                                data-client-name="{{ nom_client }}"
+                                data-retouches='{{ retouches_client|tojson|safe }}'
+                                onclick="openClientActionsModal(this)">
+                                    <p class="has-text-weight-bold is-size-5" style="color:#6c63ff;">{{ nom_client }}</p>
+                                    <p class="is-size-6 has-text-grey-dark">{{ retouches_client|length }} article(s)</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="box has-text-centered">
+                        <p class="has-text-grey">Aucune retouche prévue pour aujourd'hui.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- NOUVELLE MODALE UNIQUE POUR LES ACTIONS -->
+<div id="client-actions-modal" class="modal">
+    <div class="modal-background"></div>
+    <div class="modal-card">
+        <header class="modal-card-head">
+            <p class="modal-card-title" id="client-actions-modal-title"></p>
+            <button class="delete" aria-label="close"></button>
+        </header>
+        <section class="modal-card-body">
+            <div id="client-actions-retouche-list">
+                <!-- La liste des retouches avec actions sera injectée ici par JavaScript -->
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('client-actions-modal');
+    if (modal) {
+        const modalTitle = document.getElementById('client-actions-modal-title');
+        const retoucheListDiv = document.getElementById('client-actions-retouche-list');
+        const closeButtons = modal.querySelectorAll('.delete, .modal-background');
+
+        window.openClientActionsModal = function(element) {
+            const clientName = element.dataset.clientName;
+            const retouches = JSON.parse(element.dataset.retouches);
+
+            modalTitle.textContent = `Actions pour ${clientName}`;
+            retoucheListDiv.innerHTML = ''; // On vide la liste précédente
+
+            retouches.forEach(retouche => {
+                const description = retouche.detail ? retouche.detail.nom : retouche.description;
+                const categorie = retouche.detail ? retouche.detail.sous_categorie.categorie.nom : 'Prestation';
+
+                // Créer les éléments DOM de manière sécurisée
+                const retoucheBox = document.createElement('div');
+                retoucheBox.className = 'box mb-4';
+
+                // Description
+                const descriptionP = document.createElement('p');
+                const strongElement = document.createElement('strong');
+                strongElement.textContent = categorie;
+                const spanElement = document.createElement('span');
+                spanElement.className = 'has-text-grey';
+                spanElement.textContent = description;
+                descriptionP.appendChild(strongElement);
+                descriptionP.appendChild(document.createTextNode(' - '));
+                descriptionP.appendChild(spanElement);
+
+                // Séparateur
+                const hr = document.createElement('hr');
+                hr.className = 'my-2';
+
+                // Niveau principal
+                const levelDiv = document.createElement('div');
+                levelDiv.className = 'level is-mobile';
+
+                // Partie gauche (formulaire statut)
+                const levelLeft = document.createElement('div');
+                <link href="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.3.4/dist/css/datepicker-bs5.min.css" rel="stylesheet" />
+                <script src="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.3.4/dist/js/datepicker-full.min.js"></script>
+                <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    // Mini calendrier VanillaJS Datepicker
+                    var miniCal = document.getElementById('mini-calendar');
+                    if (miniCal) {
+                        var today = new Date();
+                        var dp = new Datepicker(miniCal, {
+                            calendarWeeks: true,
+                            todayHighlight: true,
+                            autohide: true,
+                            format: 'yyyy-mm-dd',
+                            defaultViewDate: { year: today.getFullYear(), month: today.getMonth()+1, day: today.getDate() },
+                        });
+                        miniCal.addEventListener('changeDate', function(e) {
+                            // Redirige vers la vue du jour sélectionné (si besoin, adapter l'URL)
+                            var date = e.detail.date;
+                            if(date) {
+                                var y = date.getFullYear();
+                                var m = (date.getMonth()+1).toString().padStart(2,'0');
+                                var d = date.getDate().toString().padStart(2,'0');
+                                window.location.href = '/aujourdhui?date='+y+'-'+m+'-'+d;
+                            }
+                        });
+                    }
+
+                    // Modale actions client (inchangée)
+                    const modal = document.getElementById('client-actions-modal');
+                    if (modal) {
+                        const modalTitle = document.getElementById('client-actions-modal-title');
+                        const retoucheListDiv = document.getElementById('client-actions-retouche-list');
+                        const closeButtons = modal.querySelectorAll('.delete, .modal-background');
+
+                        window.openClientActionsModal = function(element) {
+                            const clientName = element.dataset.clientName;
+                            const retouches = JSON.parse(element.dataset.retouches);
+
+                            modalTitle.textContent = `Actions pour ${clientName}`;
+                            retoucheListDiv.innerHTML = '';
+
+                            retouches.forEach(retouche => {
+                                const description = retouche.detail ? retouche.detail.nom : retouche.description;
+                                const categorie = retouche.detail ? retouche.detail.sous_categorie.categorie.nom : 'Prestation';
+
+                                const retoucheBox = document.createElement('div');
+                                retoucheBox.className = 'box mb-4';
+
+                                const descriptionP = document.createElement('p');
+                                const strongElement = document.createElement('strong');
+                                strongElement.textContent = categorie;
+                                const spanElement = document.createElement('span');
+                                spanElement.className = 'has-text-grey';
+                                spanElement.textContent = description;
+                                descriptionP.appendChild(strongElement);
+                                descriptionP.appendChild(document.createTextNode(' - '));
+                                descriptionP.appendChild(spanElement);
+
+                                const hr = document.createElement('hr');
+                                hr.className = 'my-2';
+
+                                const levelDiv = document.createElement('div');
+                                levelDiv.className = 'level is-mobile';
+
+                                const levelLeft = document.createElement('div');
+                                levelLeft.className = 'level-left';
+                                const statusForm = document.createElement('form');
+                                statusForm.method = 'post';
+                                statusForm.action = `/retouche/update_status/${retouche.id}`;
+                                statusForm.className = 'is-flex is-align-items-center';
+
+                                const selectDiv = document.createElement('div');
+                                selectDiv.className = 'select is-small';
+                                const statusSelect = document.createElement('select');
+                                statusSelect.name = 'statut';
+                                statusSelect.onchange = function() { this.form.submit(); };
+
+                                const options = ['En cours', 'Terminée', 'Rendue'];
+                                options.forEach(status => {
+                                    const option = document.createElement('option');
+                                    option.value = status;
+                                    option.textContent = status;
+                                    if (retouche.statut === status) {
+                                        option.selected = true;
+                                    }
+                                    statusSelect.appendChild(option);
+                                });
+
+                                selectDiv.appendChild(statusSelect);
+                                statusForm.appendChild(selectDiv);
+                                levelLeft.appendChild(statusForm);
+
+                                const levelRight = document.createElement('div');
+                                levelRight.className = 'level-right';
+                                const buttonsDiv = document.createElement('div');
+                                buttonsDiv.className = 'buttons are-small';
+
+                                const modifyLink = document.createElement('a');
+                                modifyLink.href = `/retouche/${retouche.id}/modifier`;
+                                modifyLink.className = 'button is-link is-light';
+                                modifyLink.textContent = 'Modifier';
+
+                                const deleteForm = document.createElement('form');
+                                deleteForm.method = 'post';
+                                deleteForm.action = `/retouche/${retouche.id}/supprimer`;
+                                deleteForm.onsubmit = function() { 
+                                    return confirm('Êtes-vous sûr de vouloir supprimer cette retouche ?'); 
+                                };
+                                const deleteButton = document.createElement('button');
+                                deleteButton.type = 'submit';
+                                deleteButton.className = 'button is-danger is-light';
+                                deleteButton.textContent = 'Supprimer';
+                                deleteForm.appendChild(deleteButton);
+
+                                buttonsDiv.appendChild(modifyLink);
+                                buttonsDiv.appendChild(deleteForm);
+                                levelRight.appendChild(buttonsDiv);
+
+                                levelDiv.appendChild(levelLeft);
+                                levelDiv.appendChild(levelRight);
+
+                                retoucheBox.appendChild(descriptionP);
+                                retoucheBox.appendChild(hr);
+                                retoucheBox.appendChild(levelDiv);
+
+                                retoucheListDiv.appendChild(retoucheBox);
+                            });
+
+                            modal.classList.add('is-active');
+                        };
+
+                        closeButtons.forEach(btn => btn.addEventListener('click', () => {
+                            modal.classList.remove('is-active');
+                        }));
+                    }
+                });
+                </script>
+{% endblock %}

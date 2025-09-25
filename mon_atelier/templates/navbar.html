@@ -1,0 +1,52 @@
+<nav class="navbar" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item" href="{{ url_for('index') }}">
+                <strong>Paula Couture</strong>
+            </a>
+
+            <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarBasicExample">
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+            </a>
+        </div>
+
+        <div id="navbarBasicExample" class="navbar-menu">
+            <div class="navbar-start">
+
+            </div>
+
+            <div class="navbar-end">
+                <div class="navbar-item">
+                    <div class="buttons">
+                        <a href="{{ url_for('ajouter_retouche') }}" class="button is-primary">
+                            <strong>+ Ajouter une retouche</strong>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="navbar-item has-dropdown is-hoverable">
+                    <a class="navbar-link">
+                        Menu
+                    </a>
+
+                    <div class="navbar-dropdown is-right">
+                        <a class="navbar-item {% if request.endpoint == 'planning_retouches_mensuel' %}is-active{% endif %}" href="{{ url_for('planning_retouches_mensuel') }}">
+                            Planning
+                        </a>
+                        <a class="navbar-item {% if request.endpoint == 'modifier_planning_employe' %}is-active{% endif %}" href="{{ url_for('modifier_planning_employe') }}">                            Planning Employé
+                        </a>
+                        <a class="navbar-item {% if request.endpoint == 'inventaire' %}is-active{% endif %}" href="{{ url_for('inventaire') }}">
+                            Inventaire
+                        </a>
+                        <hr class="navbar-divider">
+                        <a class="navbar-item {% if request.endpoint == 'parametres' %}is-active{% endif %}" href="{{ url_for('parametres') }}">
+                            Paramètres
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>

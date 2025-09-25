@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}Calendrier mensuel de présence/congé{% endblock %}
+{% block content %}
+<h2>Calendrier mensuel de {{ employe.nom }}</h2>
+<div id="calendar-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var calendarEl = document.getElementById('calendar-container');
+  var calendar = new FullCalendar.Calendar(calendarEl, {
+    initialView: 'dayGridMonth',
+    headerToolbar: {
+      left: 'prev,next today',
+      center: 'title',
+      right: ''
+    },
+    locale: 'fr',
+    height: 'auto',
+    events: {{ events|default([])|tojson|safe }},
+    dateClick: function(info) {
+      window.location.href = "{{ url_for('modifier_presence_conge') }}?employe_id={{ employe.id }}&date=" + info.dateStr;
+    },
+    eventClick: function(info) {
+      window.location.href = "{{ url_for('modifier_presence_conge') }}?employe_id={{ employe.id }}&date=" + info.event.startStr;
+    }
+  });
+  calendar.render();
+});
+</script>
+<a href="{{ url_for('index') }}" class="button is-light">Retour</a>
+{% endblock %}

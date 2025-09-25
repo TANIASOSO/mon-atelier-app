@@ -1,0 +1,383 @@
+{% extends 'base.html' %}
+
+{% block head %}
+    <link href="{{ url_for('static', filename='css/fullcalendar.min.css') }}" rel="stylesheet" />
+    <style>
+        .tache-a-faire { background-color: #007bff !important; color: white !important; cursor: pointer !important; }
+        .tache-terminee { background-color: #28a745 !important; color: white !important; cursor: pointer !important; text-decoration: line-through; }
+        .tache-depassee { background-color: #dc3545 !important; color: white !important; cursor: pointer !important; }
+        .fc-event { cursor: pointer !important; }
+        
+        /* Améliorer l'affichage des événements multi-lignes */
+        .fc-event-title {
+            white-space: pre-line !important;
+            line-height: 1.2 !important;
+            font-size: 0.85em !important;
+        }
+        
+        .fc-daygrid-event {
+            margin-bottom: 1px !important;
+        }
+        
+        .fc-event-main {
+            padding: 2px 4px !important;
+        }
+        
+        /* Styles pour centrer la popup SweetAlert */
+        .swal-centered-popup {
+            position: fixed !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            z-index: 10000 !important;
+        }
+        
+        .swal2-container {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+        }
+        
+        .swal2-popup {
+            position: relative !important;
+            transform: none !important;
+        }
+        
+        /* Styles pour la modale personnalisée */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            min-width: 500px;
+            max-width: 90%;
+            animation: modalFadeIn 0.3s ease;
+        }
+        
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            color: #333;
+            font-size: 1.2em;
+        }
+        
+        .modal-close {
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+        }
+        
+        .modal-close:hover {
+            color: #333;
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .status-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        
+        .status-section label {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .status-section select {
+            padding: 5px 10px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .modal-footer {
+            padding: 15px 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .btn-light {
+            background-color: #f8f9fa;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        
+        .btn:hover {
+            opacity: 0.8;
+        }
+        
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="box">
+            <h1 class="title has-text-centered" style="color:#6c63ff;">
+                Planning Mensuel des Retouches
+            </h1>
+            <div id="retouches-calendar"></div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+console.log('Script de planning retouches chargé');
+
+// Attendre que le DOM soit complètement chargé
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM chargé');
+    
+    // Vérifier si FullCalendar est disponible
+    if (typeof FullCalendar === 'undefined') {
+        console.error('FullCalendar n\'est pas chargé');
+        document.getElementById('retouches-calendar').innerHTML = '<p style="color: red; font-weight: bold;">Erreur : FullCalendar n\'est pas disponible. Vérifiez votre connexion internet.</p>';
+        return;
+    }
+    console.log('FullCalendar disponible');
+    
+    var calendarEl = document.getElementById('retouches-calendar');
+    if (!calendarEl) {
+        console.error('Élément calendar non trouvé');
+        return;
+    }
+    console.log('Élément calendar trouvé');
+    
+    try {
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            locale: 'fr',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,listWeek'
+            },
+            buttonText: {
+                today: 'Aujourd\'hui',
+                month: 'Mois',
+                week:  'Semaine',
+                list:  'Liste'
+            },
+            events: '/api/retouche_events',
+            height: 'auto',
+            eventClick: function(info) {
+                info.jsEvent.preventDefault();
+                const ticketId = info.event.extendedProps.ticket_id;
+                const clientNom = info.event.extendedProps.client_name;
+                let currentStatus = info.event.classNames.includes('tache-terminee') ? 'Terminée' : 'En cours';
+
+                // Utiliser la modale personnalisée pour un meilleur contrôle du positionnement
+                showCustomModal(ticketId, clientNom, currentStatus);
+                
+                /* Version SweetAlert2 (commentée)
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: `Actions pour le ticket de ${clientNom}`,
+                        html: `
+                            <p>Que souhaitez-vous faire ?</p>
+                            <div style="margin: 20px 0; padding: 15px; border: 1px solid #eee; border-radius: 5px;">
+                                <label for="ticket-status-select" style="margin-right: 10px; font-weight: bold;">Changer le statut :</label>
+                                <select id="ticket-status-select" class="swal2-select">
+                                    <option value="En cours" ${currentStatus === 'En cours' ? 'selected' : ''}>En cours</option>
+                                    <option value="Terminée" ${currentStatus === 'Terminée' ? 'selected' : ''}>Terminée</option>
+                                </select>
+                                <button id="save-status-btn" class="swal2-confirm swal2-styled" style="background-color: #27ae60; margin-left: 10px;">Enregistrer</button>
+                            </div>`,
+                        width: 600,
+                        padding: '3em',
+                        position: 'center',
+                        backdrop: true,
+                        allowOutsideClick: true,
+                        showConfirmButton: false,
+                        showDenyButton: true,
+                        showCancelButton: true,
+                        denyButtonText: `Modifier`,
+                        cancelButtonText: `Réimprimer`,
+                        customClass: {
+                            popup: 'swal-centered-popup'
+                        },
+                        didOpen: () => {
+                            document.getElementById('save-status-btn').addEventListener('click', () => {
+                                const newStatus = document.getElementById('ticket-status-select').value;
+                                fetch(`/api/ticket/${ticketId}/update_status`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ statut: newStatus })
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        Swal.fire('Succès!', 'Le statut a été mis à jour.', 'success');
+                                        calendar.refetchEvents();
+                                    } else {
+                                        Swal.fire('Erreur', 'La mise à jour a échoué.', 'error');
+                                    }
+                                });
+                            });
+                            Swal.getDenyButton().addEventListener('click', () => { window.location.href = `/ticket/${ticketId}/modifier`; });
+                            Swal.getCancelButton().addEventListener('click', () => { window.open(`/ticket/${ticketId}/reimprimer`, '_blank'); });
+                        }
+                    });
+                } 
+                */ // Fin du commentaire SweetAlert2
+            },
+            eventDidMount: function(info) {
+                console.log('Événement monté:', info.event.title);
+                // Appliquer les classes CSS personnalisées
+                if (info.event.classNames) {
+                    info.event.classNames.forEach(function(className) {
+                        info.el.classList.add(className);
+                    });
+                }
+            }
+        });
+        
+        console.log('Calendar créé, début du rendu...');
+        calendar.render();
+        console.log('Calendar rendu');
+        
+    } catch (error) {
+        console.error('Erreur lors de la création du calendar:', error);
+        calendarEl.innerHTML = '<p style="color: red; font-weight: bold;">Erreur lors de l\'initialisation du calendrier : ' + error.message + '</p>';
+    }
+});
+
+// Fonction pour afficher une modale personnalisée
+function showCustomModal(ticketId, clientNom, currentStatus) {
+    // Créer l'overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Actions pour le ticket de ${clientNom}</h3>
+                <span class="modal-close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>Que souhaitez-vous faire ?</p>
+                <div class="status-section">
+                    <form id="status-form" method="POST" action="/api/ticket/${ticketId}/update_status_simple">
+                        <label for="status-select">Changer le statut :</label>
+                        <select id="status-select" name="statut">
+                            <option value="En cours" ${currentStatus === 'En cours' ? 'selected' : ''}>En cours</option>
+                            <option value="Terminée" ${currentStatus === 'Terminée' ? 'selected' : ''}>Terminée</option>
+                        </select>
+                        <button id="save-status" type="button" class="btn btn-success">Enregistrer</button>
+                    </form>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="modify-ticket" class="btn btn-primary">Modifier</button>
+                <button id="reprint-ticket" class="btn btn-secondary">Réimprimer</button>
+                <button id="send-sms" class="btn btn-success">📱 SMS</button>
+                <button id="close-modal" class="btn btn-light">Fermer</button>
+            </div>
+        </div>
+    `;
+    
+    // Ajouter au DOM
+    document.body.appendChild(overlay);
+    
+    // Gestionnaires d'événements
+    overlay.querySelector('.modal-close').onclick = () => document.body.removeChild(overlay);
+    overlay.querySelector('#close-modal').onclick = () => document.body.removeChild(overlay);
+    overlay.onclick = (e) => { if (e.target === overlay) document.body.removeChild(overlay); };
+    
+    overlay.querySelector('#save-status').onclick = () => {
+        const form = overlay.querySelector('#status-form');
+        const newStatus = overlay.querySelector('#status-select').value;
+        console.log('Changement de statut vers:', newStatus);
+        
+        // Créer un formulaire caché pour la soumission
+        const hiddenForm = document.createElement('form');
+        hiddenForm.method = 'POST';
+        hiddenForm.action = `/api/ticket/${ticketId}/update_status_simple`;
+        
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'statut';
+        input.value = newStatus;
+        
+        hiddenForm.appendChild(input);
+        document.body.appendChild(hiddenForm);
+        
+        // Fermer la modale et soumettre
+        document.body.removeChild(overlay);
+        hiddenForm.submit();
+    };
+    
+    overlay.querySelector('#modify-ticket').onclick = () => {
+        window.location.href = `/ticket/${ticketId}/modifier`;
+    };
+    
+    overlay.querySelector('#reprint-ticket').onclick = () => {
+        window.open(`/ticket/${ticketId}/reimprimer`, '_blank');
+    };
+    
+    overlay.querySelector('#send-sms').onclick = () => {
+        window.location.href = `/sms/${ticketId}`;
+    };
+}
+</script>
+{% endblock %}

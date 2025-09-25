@@ -1,0 +1,433 @@
+{% extends "base.html" %}
+
+{% block title %}
+SMS - {{ client.nom }} {{ client.prenom }}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="section">
+        <div class="columns is-centered">
+            <div class="column is-half">
+                <div class="box">
+                    <h1 class="title is-4 has-text-centered">
+                        <span class="icon">
+                            <i class="fas fa-sms"></i>
+                        </span>
+                        Envoyer SMS
+                    </h1>
+                    
+                    <!-- Informations client -->
+                    <div class="notification is-primary is-light">
+                        <p><strong>Client :</strong> {{ client.nom }} {{ client.prenom }}</p>
+                        <p><strong>Téléphone :</strong> {{ client.numero_telephone }}</p>
+                        <p><strong>Ticket :</strong> #{{ ticket.id }}</p>
+                    </div>
+                    
+                    <!-- Message à envoyer -->
+                    <div class="box">
+                        <h2 class="subtitle is-5">Message :</h2>
+                        <div class="content">
+                            <pre style="white-space: pre-wrap; font-family: inherit;">{{ message }}</pre>
+                        </div>
+                    </div>
+                    
+                    <!-- Boutons d'action -->
+                    <div class="field is-grouped">
+                        <div class="control is-expanded">
+                            <button class="button is-success is-large is-fullwidth" onclick="envoyerSMS()" id="btnEnvoyerSMS">
+                                <span class="icon is-small">
+                                    <i class="fas fa-paper-plane"></i>
+                                </span>
+                                <span id="texteBoutonSMS">Ouvrir l'app SMS</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Notification pour ordinateur -->
+                    <div class="notification is-warning is-light" id="warningOrdinateur" style="display: none;">
+                        <div class="content">
+                            <p><strong>💻 Utilisation sur ordinateur détectée</strong></p>
+                            <p>Le bouton ci-dessus ouvrira des options adaptées pour envoyer le SMS depuis votre ordinateur :</p>
+                            <ul>
+                                <li><strong>Google Messages</strong> - Envoyez des SMS directement depuis votre navigateur</li>
+                                <li><strong>QR Code</strong> - Scannez avec votre téléphone</li>
+                                <li><strong>Copier</strong> - Pour utiliser dans une autre application</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="field is-grouped">
+                        <div class="control">
+                            <button class="button is-warning" onclick="copierNumero()">
+                                <span class="icon is-small">
+                                    <i class="fas fa-phone-alt"></i>
+                                </span>
+                                <span>Copier numéro</span>
+                            </button>
+                        </div>
+                        <div class="control">
+                            <button class="button is-info" onclick="copierMessage()">
+                                <span class="icon is-small">
+                                    <i class="fas fa-copy"></i>
+                                </span>
+                                <span>Copier message</span>
+                            </button>
+                        </div>
+                        <div class="control">
+                            <button class="button is-success" onclick="ouvrirAppeler()">
+                                <span class="icon is-small">
+                                    <i class="fas fa-phone"></i>
+                                </span>
+                                <span>Appeler</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Instructions -->
+                    <div class="notification is-info is-light" id="instructionsMobile">
+                        <div class="content">
+                            <p><strong>Instructions (Mobile) :</strong></p>
+                            <ol>
+                                <li>Cliquez sur le bouton "Ouvrir l'app SMS"</li>
+                                <li>Votre application SMS va s'ouvrir avec le message pré-rempli</li>
+                                <li>Vérifiez le message et appuyez sur "Envoyer"</li>
+                            </ol>
+                        </div>
+                    </div>
+                    
+                    <div class="notification is-info is-light" id="instructionsOrdinateur" style="display: none;">
+                        <div class="content">
+                            <p><strong>Instructions (Ordinateur) :</strong></p>
+                            <ol>
+                                <li>Cliquez sur le bouton ci-dessus pour voir les options</li>
+                                <li>Choisissez : Copier le message, Google Messages Web, ou QR Code</li>
+                                <li>Google Messages permet d'envoyer des SMS depuis votre ordinateur</li>
+                            </ol>
+                        </div>
+                    </div>
+                    
+                    <!-- Boutons de navigation -->
+                    <div class="field is-grouped">
+                        <div class="control">
+                            <a href="{{ url_for('planning_retouches_mensuel') }}" class="button">
+                                <span class="icon">
+                                    <i class="fas fa-arrow-left"></i>
+                                </span>
+                                <span>Retour au planning</span>
+                            </a>
+                        </div>
+                        <div class="control">
+                            <a href="{{ url_for('detail_ticket', ticket_id=ticket.id) }}" class="button is-info">
+                                <span class="icon">
+                                    <i class="fas fa-ticket-alt"></i>
+                                </span>
+                                <span>Voir le ticket</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variables JavaScript propres
+const messageText = {{ message|tojson|safe }};
+const numeroClient = {{ client.numero_telephone|tojson|safe }};
+const lienPrincipal = {{ lien_sms|tojson|safe }};
+
+{% if liens_sms %}
+const liensAlternatifs = {
+    international: {{ liens_sms.sms_international|tojson|safe }},
+    national: {{ liens_sms.sms_national|tojson|safe }},
+    tel: {{ liens_sms.tel_link|tojson|safe }}
+};
+{% else %}
+const liensAlternatifs = {
+    international: "",
+    national: "",
+    tel: ""
+};
+{% endif %}
+
+function envoyerSMS() {
+    console.log('Tentative d\'ouverture SMS...');
+    console.log('Lien principal:', lienPrincipal);
+    
+    // Détecter si on est sur un ordinateur ou mobile
+    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    if (!isMobile) {
+        // Sur ordinateur, proposer directement les alternatives
+        proposerAlternativesOrdinateur();
+        return;
+    }
+    
+    // Sur mobile, essayer d'ouvrir le lien SMS
+    window.location.href = lienPrincipal;
+    
+    // Si ça ne marche pas, essayer avec window.open après 1 seconde
+    setTimeout(() => {
+        try {
+            window.open(lienPrincipal, '_self');
+        } catch (e) {
+            console.log('Erreur avec window.open:', e);
+        }
+    }, 1000);
+    
+    // Si toujours pas, proposer alternatives après 3 secondes
+    setTimeout(() => {
+        if (confirm('L\'application SMS ne s\'est pas ouverte automatiquement. Voulez-vous essayer une méthode alternative ?')) {
+            essayerMethodeAlternative();
+        }
+    }, 3000);
+}
+
+function essayerMethodeAlternative() {
+    if (liensAlternatifs.national) {
+        console.log('Essai avec numéro national...');
+        window.location.href = liensAlternatifs.national;
+    } else {
+        // Fallback manuel
+        const telEncoded = encodeURIComponent(numeroClient);
+        const msgEncoded = encodeURIComponent(messageText);
+        const smsUrl = `sms:${telEncoded}?body=${msgEncoded}`;
+        console.log('Fallback manuel:', smsUrl);
+        window.location.href = smsUrl;
+    }
+}
+
+function ouvrirAppeler() {
+    if (liensAlternatifs.tel) {
+        window.location.href = liensAlternatifs.tel;
+    } else {
+        window.location.href = "tel:" + numeroClient;
+    }
+}
+
+function proposerAlternativesOrdinateur() {
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5); z-index: 1000; display: flex;
+        align-items: center; justify-content: center;
+    `;
+    
+    modal.innerHTML = `
+        <div style="background: white; padding: 20px; border-radius: 8px; max-width: 500px; margin: 20px;">
+            <h3 style="margin-top: 0;">Envoyer SMS depuis ordinateur</h3>
+            <p>Vous utilisez un ordinateur. Choisissez une option :</p>
+            
+            <div style="margin: 15px 0;">
+                <button onclick="ouvrirGoogleMessages()" style="padding: 10px 15px; margin: 5px; background: #4285f4; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    � Ouvrir Google Messages
+                </button>
+            </div>
+            <div style="display: flex; gap: 5px; margin: 10px 0;">
+                <button onclick="copierNumeroEtFermer()" style="padding: 10px 15px; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; flex: 1;">
+                    📞 Copier numéro
+                </button>
+                <button onclick="copierEtFermer()" style="padding: 10px 15px; background: #3273dc; color: white; border: none; border-radius: 4px; cursor: pointer; flex: 1;">
+                    � Copier message
+                </button>
+            </div>
+            <div style="margin: 10px 0;">
+                <button onclick="genererQRCode()" style="padding: 10px 15px; margin: 5px; background: #ff3860; color: white; border: none; border-radius: 4px; cursor: pointer; width: calc(100% - 10px);">
+                    📱 Générer QR Code
+                </button>
+            </div>
+            
+            <div style="margin-top: 15px; padding: 10px; background: #f5f5f5; border-radius: 4px;">
+                <strong>Message à envoyer :</strong><br>
+                <div style="font-family: monospace; font-size: 12px; margin-top: 5px; max-height: 150px; overflow-y: auto;">
+                    ${messageText.replace(/\n/g, '<br>')}
+                </div>
+            </div>
+            
+            <div style="text-align: right; margin-top: 15px;">
+                <button onclick="fermerModal()" style="padding: 8px 12px; background: #ccc; color: #333; border: none; border-radius: 4px; cursor: pointer;">
+                    Fermer
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    window.currentModal = modal;
+}
+
+function copierEtFermer() {
+    copierMessage();
+    fermerModal();
+}
+
+function copierNumeroEtFermer() {
+    copierNumero();
+    fermerModal();
+}
+
+function ouvrirGoogleMessages() {
+    // Afficher les options pour Google Messages
+    const optionsModal = document.createElement('div');
+    optionsModal.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5); z-index: 1002; display: flex;
+        align-items: center; justify-content: center;
+    `;
+    
+    optionsModal.innerHTML = `
+        <div style="background: white; padding: 20px; border-radius: 8px; max-width: 500px; margin: 20px;">
+            <h3 style="margin-top: 0; color: #4285f4;">📱 Google Messages Web</h3>
+            <p>Choisissez votre méthode préférée :</p>
+            
+            <div style="margin: 15px 0;">
+                <button onclick="ouvrirMessagesDirectement()" style="padding: 10px 15px; margin: 5px; background: #4285f4; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">
+                    🚀 Ouvrir Google Messages (recommandé)
+                </button>
+                <button onclick="copierNumero()" style="padding: 10px 15px; margin: 5px; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">
+                    📞 Copier le numéro
+                </button>
+                <button onclick="copierMessage()" style="padding: 10px 15px; margin: 5px; background: #34a853; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">
+                    📋 Copier le message
+                </button>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 10px; border-radius: 4px; font-size: 13px; color: #666;">
+                <strong>💡 Astuce :</strong> Pour utiliser Google Messages Web, vous devez d'abord connecter votre téléphone Android en scannant le QR code sur messages.google.com
+            </div>
+            
+            <div style="text-align: right; margin-top: 15px;">
+                <button onclick="document.body.removeChild(this.parentElement.parentElement)" style="padding: 8px 12px; background: #ccc; color: #333; border: none; border-radius: 4px; cursor: pointer;">
+                    Fermer
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(optionsModal);
+    fermerModal();
+}
+
+function ouvrirMessagesDirectement() {
+    // Ouvrir Google Messages Web
+    window.open('https://messages.google.com/web/conversations', '_blank');
+    
+    // Copier automatiquement le message
+    copierPourMessages();
+    
+    // Fermer toutes les modales
+    document.querySelectorAll('[style*="position: fixed"]').forEach(modal => {
+        if (modal.parentElement) {
+            document.body.removeChild(modal);
+        }
+    });
+}
+
+function copierNumero() {
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(numeroClient).then(() => {
+            alert('📞 Numéro copié !\n\n' + numeroClient + '\n\nVous pouvez maintenant le coller dans Google Messages.');
+        });
+    } else {
+        // Fallback pour anciens navigateurs
+        const textarea = document.createElement('textarea');
+        textarea.value = numeroClient;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        alert('📞 Numéro copié !\n\n' + numeroClient + '\n\nVous pouvez maintenant le coller dans Google Messages.');
+    }
+}
+
+function copierPourMessages() {
+    const texteToCopy = `Numéro: ${numeroClient}\n\nMessage:\n${messageText}`;
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(texteToCopy).then(() => {
+            alert('✅ Numéro et message copiés !\n\n📱 Dans Google Messages :\n1. Cliquez sur "Nouvelle conversation"\n2. Collez le numéro\n3. Collez le message');
+        });
+    } else {
+        // Fallback
+        const textarea = document.createElement('textarea');
+        textarea.value = texteToCopy;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        alert('✅ Numéro et message copiés !\n\n📱 Dans Google Messages :\n1. Cliquez sur "Nouvelle conversation"\n2. Collez le numéro\n3. Collez le message');
+    }
+}
+
+function genererQRCode() {
+    const qrData = `sms:${numeroClient}?body=${encodeURIComponent(messageText)}`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}`;
+    
+    const qrModal = document.createElement('div');
+    qrModal.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5); z-index: 1001; display: flex;
+        align-items: center; justify-content: center;
+    `;
+    
+    qrModal.innerHTML = `
+        <div style="background: white; padding: 20px; border-radius: 8px; text-align: center;">
+            <h3>Scannez avec votre téléphone</h3>
+            <img src="${qrUrl}" alt="QR Code SMS" style="border: 1px solid #ddd;">
+            <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                Scannez ce QR code avec votre téléphone pour ouvrir l'SMS
+            </p>
+            <button onclick="document.body.removeChild(this.parentElement.parentElement)" style="padding: 8px 12px; background: #3273dc; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px;">
+                Fermer
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(qrModal);
+    fermerModal();
+}
+
+function fermerModal() {
+    if (window.currentModal) {
+        document.body.removeChild(window.currentModal);
+        window.currentModal = null;
+    }
+}
+
+function copierMessage() {
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(messageText).then(() => {
+            alert('Message copié ! Vous pouvez maintenant l\'envoyer manuellement via votre app SMS.');
+        });
+    } else {
+        // Fallback pour anciens navigateurs
+        const textarea = document.createElement('textarea');
+        textarea.value = messageText;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        alert('Message copié ! Vous pouvez maintenant l\'envoyer manuellement via votre app SMS.');
+    }
+}
+
+// Détecter le type d'appareil au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    if (!isMobile) {
+        // Sur ordinateur, modifier l'interface
+        document.getElementById('texteBoutonSMS').textContent = 'Options SMS pour ordinateur';
+        document.getElementById('warningOrdinateur').style.display = 'block';
+        document.getElementById('btnEnvoyerSMS').classList.remove('is-success');
+        document.getElementById('btnEnvoyerSMS').classList.add('is-info');
+        
+        // Changer les instructions
+        document.getElementById('instructionsMobile').style.display = 'none';
+        document.getElementById('instructionsOrdinateur').style.display = 'block';
+    }
+});
+</script>
+
+{% endblock %}

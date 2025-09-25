@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="title is-3">Modifier le ticket n°{{ ticket.id }}</h2>
+    <form method="post" id="modifier-ticket-form">
+        <div class="box">
+            <h4 class="subtitle is-5">Client : {{ ticket.client.nom }} ({{ ticket.client.numero_telephone }})</h4>
+            <div id="retouches-container">
+            {% for retouche in ticket.retouches %}
+                <div class="retouche-line columns is-vcentered is-multiline" data-retouche-id="{{ retouche.id }}">
+                    <div class="column is-3">
+                        <div class="field">
+                            <label class="label">Catégorie</label>
+                            <div class="control">
+                                <div class="select is-fullwidth">
+                                    <select class="categorie-select" name="categorie_{{ retouche.id }}">
+                                        <option value="">Choisir...</option>
+                                        {% for cat in categories %}
+                                        <option value="{{ cat.id }}" {% if retouche.detail and retouche.detail.sous_categorie and retouche.detail.sous_categorie.categorie and retouche.detail.sous_categorie.categorie.id == cat.id %}selected{% endif %}>{{ cat.nom }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="column is-3">
+                        <div class="field">
+                            <label class="label">Sous-catégorie</label>
+                            <div class="control">
+                                <div class="select is-fullwidth">
+                                    <select class="sous-categorie-select" name="sous_categorie_{{ retouche.id }}" data-selected="{{ retouche.detail.sous_categorie.id if retouche.detail and retouche.detail.sous_categorie else '' }}">
+                                        <option value="">Choisir...</option>
+                                        {% if retouche.detail and retouche.detail.sous_categorie %}
+                                            <option value="{{ retouche.detail.sous_categorie.id }}" selected>{{ retouche.detail.sous_categorie.nom }}</option>
+                                        {% endif %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="column is-3">
+                        <div class="field">
+                            <label class="label">Prestation</label>
+                            <div class="control">
+                                <div class="select is-fullwidth">
+                                    <select class="detail-retouche-select" name="detail_retouche_id_{{ retouche.id }}" data-selected="{{ retouche.detail.id if retouche.detail else '' }}">
+                                        <option value="">Choisir...</option>
+                                        {% if retouche.detail %}
+                                            <option value="{{ retouche.detail.id }}" selected>{{ retouche.detail.nom }}</option>
+                                        {% endif %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="column is-2">
+                        <div class="field">
+                            <label class="label">Prix (€)</label>
+                            <div class="control">
+                                <input class="input prix-input" type="number" step="0.01" name="prix_{{ retouche.id }}" value="{{ retouche.prix }}">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="column is-1">
+                        <label class="label">&nbsp;</label>
+                        <button type="button" class="button is-danger is-light" onclick="removeLine(this, {{ retouche.id }})">X</button>
+                    </div>
+                    <div class="column is-full">
+                        <div class="field">
+                            <label class="label">Description</label>
+                            <div class="control">
+                                <input class="input" type="text" name="description_{{ retouche.id }}" value="{{ retouche.description }}">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="column is-full"><hr style="margin-top: 0; margin-bottom: 1.5rem;"></div>
+                </div>
+            {% endfor %}
+            </div>
+        </div>
+        
+        <div class="field">
+            <div class="control">
+                <label class="checkbox">
+                    <input type="checkbox" name="paye" {% if ticket.paye %}checked{% endif %}>
+                    Marquer comme Payé
+                </label>
+            </div>
+        </div>
+        
+        <div class="field is-grouped is-grouped-right">
+            <div class="control">
+                <button class="button is-primary" type="submit">Enregistrer les modifications</button>
+            </div>
+            <div class="control">
+                <a class="button is-light" href="{{ url_for('detail_ticket', ticket_id=ticket.id) }}">Annuler</a>
+            </div>
+        </div>
+
+    </form>
+</div>
+
+<script type="text/javascript">
+// --- Gestion dynamique des menus déroulants ---
+document.addEventListener('DOMContentLoaded', function() {
+    // Pour chaque ligne de retouche
+    document.querySelectorAll('.retouche-line').forEach(function(line) {
+        const catSelect = line.querySelector('.categorie-select');
+        const sousCatSelect = line.querySelector('.sous-categorie-select');
+        const detailSelect = line.querySelector('.detail-retouche-select');
+        const prixInput = line.querySelector('.prix-input');
+
+        // Initialisation des sous-catégories si déjà sélectionné
+        if (catSelect.value) {
+            fetch(`/api/sous_categories/${catSelect.value}`)
+                .then(r => r.json())
+                .then(sousCats => {
+                    sousCatSelect.innerHTML = '<option value="">Choisir...</option>';
+                    sousCats.forEach(sc => {
+                        const opt = document.createElement('option');
+                        opt.value = sc.id;
+                        opt.textContent = sc.nom;
+                        if (sousCatSelect.getAttribute('data-selected') == String(sc.id)) opt.selected = true;
+                        sousCatSelect.appendChild(opt);
+                    });
+                    sousCatSelect.disabled = false;
+                });
+        }
+        // Initialisation des détails si déjà sélectionné
+        if (sousCatSelect.value) {
+            fetch(`/api/details_retouche/${sousCatSelect.value}`)
+                .then(r => r.json())
+                .then(details => {
+                    detailSelect.innerHTML = '<option value="">Choisir...</option>';
+                    details.forEach(d => {
+                        const opt = document.createElement('option');
+                        opt.value = d.id;
+                        opt.textContent = d.nom;
+                        opt.setAttribute('data-prix', d.prix);
+                        if (detailSelect.getAttribute('data-selected') == String(d.id)) opt.selected = true;
+                        detailSelect.appendChild(opt);
+                    });
+                    detailSelect.disabled = false;
+                });
+        }
+
+        catSelect.addEventListener('change', function() {
+            const catId = catSelect.value;
+            sousCatSelect.innerHTML = '<option value="">Chargement...</option>';
+            sousCatSelect.disabled = true;
+            detailSelect.innerHTML = '<option value="">Choisir une sous-catégorie d&#39;abord</option>';
+            detailSelect.disabled = true;
+            prixInput.value = '';
+            if (!catId) return;
+            fetch(`/api/sous_categories/${catId}`)
+                .then(r => r.json())
+                .then(sousCats => {
+                    sousCatSelect.innerHTML = '<option value="">Choisir...</option>';
+                    sousCats.forEach(sc => {
+                        const opt = document.createElement('option');
+                        opt.value = sc.id;
+                        opt.textContent = sc.nom;
+                        sousCatSelect.appendChild(opt);
+                    });
+                    sousCatSelect.disabled = false;
+                });
+        });
+
+        sousCatSelect.addEventListener('change', function() {
+            const sousCatId = sousCatSelect.value;
+            detailSelect.innerHTML = '<option value="">Chargement...</option>';
+            detailSelect.disabled = true;
+            prixInput.value = '';
+            if (!sousCatId) return;
+            fetch(`/api/details_retouche/${sousCatId}`)
+                .then(r => r.json())
+                .then(details => {
+                    detailSelect.innerHTML = '<option value="">Choisir...</option>';
+                    details.forEach(d => {
+                        const opt = document.createElement('option');
+                        opt.value = d.id;
+                        opt.textContent = d.nom;
+                        opt.setAttribute('data-prix', d.prix);
+                        detailSelect.appendChild(opt);
+                    });
+                    detailSelect.disabled = false;
+                });
+        });
+
+        detailSelect.addEventListener('change', function() {
+            const selectedOption = detailSelect.options[detailSelect.selectedIndex];
+            if (selectedOption) {
+                const prix = selectedOption.getAttribute('data-prix');
+                prixInput.value = prix || '';
+            }
+        });
+    });
+});
+
+// Suppression d'une ligne de retouche (demande confirmation et soumet un formulaire de suppression)
+function removeLine(button, retoucheId) {
+    if (confirm('Supprimer cette retouche ?')) {
+        // Crée un formulaire temporaire pour POST
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/retouche/${retoucheId}/supprimer`;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+ </script>
+{% endblock %}

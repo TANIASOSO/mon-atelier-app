@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="section" style="background: #eaf3fa; min-height: 100vh;">
+    <div class="container">
+        <div class="box" style="max-width: 900px; margin: 0 auto; border-radius: 18px; box-shadow: 0 2px 8px #ececff;">
+            <h1 class="title has-text-centered" style="color:#6c63ff;">Inventaire</h1>
+            <h2 class="subtitle has-text-centered" style="color:#888;">État actuel de votre stock de fournitures</h2>
+            <table class="table is-fullwidth is-striped is-hoverable" style="margin-top:2rem;">
+                <thead>
+                    <tr>
+                        <th>Nom</th>
+                        <th>Référence</th>
+                        <th class="has-text-centered">Quantité en Stock</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for f in fournitures %}
+                    <tr>
+                        <td>{{ f.nom }}</td>
+                        <td>{{ f.reference or '-' }}</td>
+                        <td class="has-text-centered {% if f.quantite <= 5 %}has-text-danger has-text-weight-bold{% endif %}">{{ f.quantite }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3" class="has-text-centered">Votre inventaire est vide. <a href="{{ url_for('parametres') }}">Ajoutez des fournitures</a>.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{% endblock %}

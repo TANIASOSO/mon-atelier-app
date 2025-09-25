@@ -1,0 +1,391 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<section class="section" style="background: #eaf3fa; min-height: 100vh;">
+    <div style="max-width: 900px; margin: 0 auto; box-shadow: 0 4px 32px #e0e0e0; border-radius: 24px; overflow: hidden; background: #fff;">
+        <div style="padding: 2.5rem 2rem 2rem 2rem;">
+            <h1 class="title" style="font-size:2.2rem; font-weight:800; color:#222; margin-bottom:0.2em;">Nouvelle Retouche</h1>
+            <h2 class="subtitle" style="font-size:1.2rem; color:#888; margin-bottom:2em;">Enregistrez une nouvelle commande client</h2>
+            <form method="post">
+                <div class="box" style="box-shadow:none; border-radius:16px;">
+                    <h2 class="subtitle is-4" style="font-size:1.1rem; color:#444;">Informations Générales</h2>
+                    <div class="columns">
+                        <div class="column">
+                            <div class="field">
+                                <label class="label">Nom du client</label>
+                                <div class="control">
+                                    <input class="input" type="text" name="nom_client" list="client-list" required>
+                                    <datalist id="client-list">
+                                        {% for client in clients %}
+                                        <option value="{{ client.nom }}" data-telephone="{{ client.numero_telephone }}"></option>
+                                        {% endfor %}
+                                    </datalist>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column">
+                            <div class="field">
+                                <label class="label">Numéro de téléphone</label>
+                                <div class="control">
+                                    <input class="input" type="tel" name="numero_telephone">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="column">
+                            <div class="field">
+                                <label class="label">Date d'échéance</label>
+                                <div class="control">
+                                    <input class="input" type="date" name="date_echeance" value="{{ date_selectionnee }}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="columns">
+                        <div class="column">
+                            <div class="field">
+                                <label class="label">Essayage</label>
+                                <div class="control">
+                                    <label class="radio">
+                                        <input type="radio" name="essayage_boutique" value="on">
+                                        Effectué en boutique
+                                    </label>
+                                    <br>
+                                    <label class="radio">
+                                        <input type="radio" name="essayage_boutique" value="off" checked>
+                                        Non effectué en boutique
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <h2 class="subtitle is-4" style="font-size:1.1rem; color:#444;">Détails des retouches</h2>
+                    <div id="retouches-container">
+                        <div class="retouche-line columns is-vcentered is-multiline" id="retouche-line-1">
+                            <div class="column is-3">
+                                <div class="field">
+                                    <label class="label">Catégorie</label>
+                                    <div class="control">
+                                        <div class="select is-fullwidth">
+                                            <select class="categorie-select">
+                                                <option value="">Choisir...</option>
+                                                {% for cat in categories %}
+                                                <option value="{{ cat.id }}">{{ cat.nom }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="column is-3">
+                                <div class="field">
+                                    <label class="label">Sous-catégorie</label>
+                                    <div class="control">
+                                        <div class="select is-fullwidth">
+                                            <select class="sous-categorie-select" disabled>
+                                                <option>Choisir une catégorie d'abord</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="column is-3">
+                                <div class="field">
+                                    <label class="label">Détail de la retouche</label>
+                                    <div class="control">
+                                        <div class="select is-fullwidth">
+                                            <select name="detail_retouche_id[]" class="detail-retouche-select" disabled>
+                                                <option>Choisir une sous-catégorie d'abord</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="column is-2">
+                                <div class="field">
+                                    <label class="label">Prix (€)</label>
+                                    <div class="control">
+                                        <input class="input prix-input" type="number" step="0.01" name="prix[]" placeholder="Auto">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="column is-2">
+                                <div class="field">
+                                    <label class="label">Quantité</label>
+                                    <div class="control">
+                                        <input class="input" type="number" name="quantite[]" min="1" value="1" style="min-width:70px;">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="column is-1">
+                                <label class="label">&nbsp;</label>
+                                <button type="button" class="button is-danger is-light" onclick="removeLine(this)">X</button>
+                            </div>
+                            <div class="column is-full">
+                                <div class="field">
+                                    <label class="label">Description (optionnel)</label>
+                                    <div class="control">
+                                        <input class="input" type="text" name="description[]" placeholder="Ex: Raccourcir de 3cm">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="column is-full"><hr style="margin-top: 0; margin-bottom: 1.5rem;"></div>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <button type="button" class="button is-link" id="add-line-btn">+ Ajouter une autre retouche</button>
+                    </div>
+                    <hr>
+                    <div class="field">
+                      <label class="checkbox">
+                        <input type="checkbox" name="paye">
+                        Le client a déjà payé
+                      </label>
+                    </div>
+                    <div class="field" style="text-align:center;">
+                        <div class="control">
+                            <button type="submit" class="button is-primary is-large">Créer le ticket</button>
+                            <button type="button" class="button is-light is-large" onclick="window.history.back();">Retour</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+<template id="retouche-line-template">
+    <div class="retouche-line columns is-vcentered is-multiline">
+        <div class="column is-3">
+            <div class="field">
+                <div class="control">
+                    <div class="select is-fullwidth">
+                        <select class="categorie-select">
+                            <option value="">Choisir...</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}">{{ cat.nom }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="column is-3">
+            <div class="field">
+                <div class="control">
+                    <div class="select is-fullwidth">
+                        <select class="sous-categorie-select" disabled>
+                            <option>Choisir une catégorie d'abord</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="column is-3">
+            <div class="field">
+                <div class="control">
+                    <div class="select is-fullwidth">
+                        <select name="detail_retouche_id[]" class="detail-retouche-select" disabled>
+                            <option>Choisir une sous-catégorie d'abord</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="column is-2">
+            <div class="field">
+                <div class="control">
+                    <input class="input prix-input" type="number" step="0.01" name="prix[]" placeholder="Auto">
+                </div>
+            </div>
+        </div>
+        <div class="column is-2">
+            <div class="field">
+                <div class="control">
+                    <input class="input" type="number" name="quantite[]" min="1" value="1" style="min-width:70px;">
+                </div>
+            </div>
+        </div>
+        <div class="column is-1">
+            <button type="button" class="button is-danger is-light" onclick="removeLine(this)">X</button>
+        </div>
+        <div class="column is-full">
+             <div class="field">
+                <div class="control">
+                    <input class="input" type="text" name="description[]" placeholder="Ex: Raccourcir de 3cm">
+                </div>
+            </div>
+        </div>
+        <div class="column is-full"><hr style="margin-top: 0; margin-bottom: 1.5rem;"></div>
+    </div>
+</template>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+    // --- Gestion de l'autocomplétion du client ---
+    const clientNameInput = document.querySelector('input[name="nom_client"]');
+    const telInput = document.querySelector('input[name="numero_telephone"]');
+    const clientList = document.getElementById('client-list');
+
+    clientNameInput.addEventListener('input', () => {
+        const selectedOption = Array.from(clientList.options).find(opt => opt.value === clientNameInput.value);
+        if (selectedOption) {
+            telInput.value = selectedOption.getAttribute('data-telephone');
+        }
+    });
+
+    // --- Gestion des lignes de retouches dynamiques ---
+    const container = document.getElementById('retouches-container');
+
+    function initializeLine(line) {
+        const catSelect = line.querySelector('.categorie-select');
+        const subCatSelect = line.querySelector('.sous-categorie-select');
+        const detailSelect = line.querySelector('.detail-retouche-select');
+        const prixInput = line.querySelector('.prix-input');
+
+        catSelect.addEventListener('change', async () => {
+            const catId = catSelect.value;
+            
+            // Vider et désactiver les selects suivants
+            subCatSelect.innerHTML = '';
+            subCatSelect.disabled = true;
+            detailSelect.innerHTML = '';
+            detailSelect.disabled = true;
+            prixInput.value = '';
+
+            // Ajouter option de chargement
+            const loadingOption = document.createElement('option');
+            loadingOption.textContent = 'Chargement...';
+            subCatSelect.appendChild(loadingOption);
+
+            if (!catId) {
+                subCatSelect.innerHTML = '';
+                const emptyOption = document.createElement('option');
+                emptyOption.textContent = 'Choisir une catégorie d\'abord';
+                subCatSelect.appendChild(emptyOption);
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/sous_categories/${catId}`);
+                const sousCategories = await response.json();
+                
+                // Vider et reconstruire les options
+                subCatSelect.innerHTML = '';
+                
+                // Option par défaut
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = 'Choisir...';
+                subCatSelect.appendChild(defaultOption);
+                
+                // Ajouter les sous-catégories
+                sousCategories.forEach(sc => {
+                    const option = document.createElement('option');
+                    option.value = sc.id;
+                    option.textContent = sc.nom;
+                    subCatSelect.appendChild(option);
+                });
+                
+                subCatSelect.disabled = false;
+            } catch (error) {
+                console.error('Erreur lors du chargement des sous-catégories:', error);
+                subCatSelect.innerHTML = '';
+                const errorOption = document.createElement('option');
+                errorOption.textContent = 'Erreur de chargement';
+                subCatSelect.appendChild(errorOption);
+            }
+        });
+
+        subCatSelect.addEventListener('change', async () => {
+            const subCatId = subCatSelect.value;
+            
+            // Vider et désactiver le select des détails
+            detailSelect.innerHTML = '';
+            detailSelect.disabled = true;
+            prixInput.value = '';
+
+            // Ajouter option de chargement
+            const loadingOption = document.createElement('option');
+            loadingOption.textContent = 'Chargement...';
+            detailSelect.appendChild(loadingOption);
+
+            if (!subCatId) {
+                detailSelect.innerHTML = '';
+                const emptyOption = document.createElement('option');
+                emptyOption.textContent = 'Choisir une sous-catégorie d\'abord';
+                detailSelect.appendChild(emptyOption);
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/details_retouche/${subCatId}`);
+                const details = await response.json();
+
+                // Vider et reconstruire les options
+                detailSelect.innerHTML = '';
+                
+                // Option par défaut
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = 'Choisir...';
+                detailSelect.appendChild(defaultOption);
+                
+                // Ajouter les détails
+                details.forEach(d => {
+                    const option = document.createElement('option');
+                    option.value = d.id;
+                    option.textContent = d.nom;
+                    if (d.prix) {
+                        option.setAttribute('data-prix', d.prix);
+                    }
+                    detailSelect.appendChild(option);
+                });
+                
+                detailSelect.disabled = false;
+            } catch (error) {
+                console.error('Erreur lors du chargement des détails:', error);
+                detailSelect.innerHTML = '';
+                const errorOption = document.createElement('option');
+                errorOption.textContent = 'Erreur de chargement';
+                detailSelect.appendChild(errorOption);
+            }
+        });
+
+        detailSelect.addEventListener('change', () => {
+            const selectedOption = detailSelect.options[detailSelect.selectedIndex];
+            if (selectedOption) {
+                const prix = selectedOption.getAttribute('data-prix');
+                prixInput.value = prix;
+            }
+        });
+    }
+
+    // Initialiser la première ligne qui est déjà dans la page
+    initializeLine(document.getElementById('retouche-line-1'));
+
+    // Gérer l'ajout de nouvelles lignes
+    document.getElementById('add-line-btn').addEventListener('click', () => {
+        const template = document.getElementById('retouche-line-template');
+        const clone = template.content.cloneNode(true);
+        container.appendChild(clone);
+        // Initialiser les événements pour la NOUVELLE ligne qui vient d'être ajoutée
+        initializeLine(container.lastElementChild);
+    });
+});
+
+// Fonction pour supprimer une ligne
+function removeLine(button) {
+    const line = button.closest('.retouche-line');
+    // On vérifie qu'il y a plus d'une ligne avant de supprimer
+    if (document.querySelectorAll('.retouche-line').length > 1) {
+        line.remove();
+    } else {
+        alert("Vous ne pouvez pas supprimer la dernière ligne.");
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Gestion Retouches</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+    
+    <!-- Scripts locaux pour éviter les problèmes CSP -->
+    <script src="{{ url_for('static', filename='js/fullcalendar.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/fullcalendar-fr.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/sweetalert2.min.js') }}"></script>
+    
+    {% block head %}{% endblock %}
+
+    <style>
+        body { background-color: #f6f6ff; }
+        .box { background-color: white; }
+    </style>
+</head>
+<body>
+    
+    {% include 'navbar.html' %}
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="container" style="margin-top: 1rem; margin-bottom: -1rem;">
+        {% for category, message in messages %}
+          {% set category_class = category if category in ['primary', 'link', 'info', 'success', 'warning', 'danger'] else 'info' %}
+          <div class="notification is-{{ category_class }}">
+            <button class="delete"></button>
+            {{ message }}
+          </div>
+        {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+
+    {% block scripts %}
+    <script>
+        // Ce script contient le code par défaut pour la navbar et les notifications
+        document.addEventListener('DOMContentLoaded', () => {
+            const $navbarBurgers = Array.prototype.slice.call(document.querySelectorAll('.navbar-burger'), 0);
+            if ($navbarBurgers.length > 0) {
+                $navbarBurgers.forEach(el => {
+                    el.addEventListener('click', () => {
+                        const target = el.dataset.target;
+                        const $target = document.getElementById(target);
+                        el.classList.toggle('is-active');
+                        $target.classList.toggle('is-active');
+                    });
+                });
+            }
+            document.querySelectorAll('.notification .delete').forEach((deleteButton) => {
+                const notification = deleteButton.parentNode;
+                deleteButton.addEventListener('click', () => {
+                    notification.parentNode.removeChild(notification);
+                });
+            });
+        });
+    </script>
+    {% endblock %}
+
+</body>
+</html>

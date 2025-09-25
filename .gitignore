@@ -1,0 +1,17 @@
+# Empêche l'ajout du fichier d'environnement contenant tes secrets
+.env
+
+# Fichiers Python compilés
+__pycache__/
+*.pyc
+
+# Dossiers de virtualenv
+venv/
+env/
+
+# Fichiers de logs
+*.log
+
+# Autres fichiers temporaires
+*.sqlite3
+.DS_Store
