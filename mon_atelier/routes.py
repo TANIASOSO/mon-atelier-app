@@ -1,4 +1,4 @@
-from mon_atelier import app, db, twilio_client
+from mon_atelier import app, db
 from datetime import date, datetime, timedelta, time
 from flask import render_template
 from flask import request, redirect, url_for, jsonify, flash, session
