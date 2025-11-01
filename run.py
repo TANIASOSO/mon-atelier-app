@@ -1,9 +1,15 @@
 from mon_atelier import app, db
+from mon_atelier.routes import seed_data  
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
 
+with app.app_context():
+    db.create_all()
+    seed_data()  
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    debug_mode = os.environ.get("FLASK_ENV") == "development"
+    app.run(host="0.0.0.0", port=port, debug=debug_mode)
