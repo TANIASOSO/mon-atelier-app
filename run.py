@@ -7,7 +7,7 @@ load_dotenv()
 
 with app.app_context():
     db.create_all()
-    seed_data()  
+    # seed_data()  
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
